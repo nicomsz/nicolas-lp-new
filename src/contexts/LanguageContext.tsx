@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState } from 'react'
 
 type Language = 'en' | 'pt'
 
@@ -16,7 +16,7 @@ const translations = {
     'nav.contact': 'Contact',
     'nav.language': 'PT',
     
-    'hero.subtitle': 'Full-stack developer with 5 years of experience building scalable web applications and blockchain solutions.',
+    'hero.subtitle': 'Proactive and highly communicative developer with strong product vision, shaped by working on both product and development fronts across multiple startups.',
     
     'about.title': 'About',
     'about.introduction.prefix': 'From',
@@ -57,7 +57,7 @@ const translations = {
     'nav.contact': 'Contato',
     'nav.language': 'EN',
     
-    'hero.subtitle': 'Desenvolvedor Full-stack com 5 anos de experiência construindo aplicações web escaláveis e soluções blockchain.',
+    'hero.subtitle': 'Desenvolvedor proativo e altamente comunicativo com forte visão de produto, moldado trabalhando nas frentes de produto e desenvolvimento em várias startups.',
     
     'about.title': 'Sobre',
     'about.introduction.prefix': 'Natural de',
@@ -99,13 +99,6 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>('en')
-
-  useEffect(() => {
-    const browserLang = navigator.language.toLowerCase()
-    if (browserLang.startsWith('pt')) {
-      setLanguage('pt')
-    }
-  }, [])
 
   const t = (key: string): string => {
     return translations[language][key as keyof typeof translations['en']] || key
