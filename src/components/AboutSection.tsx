@@ -14,7 +14,7 @@ export const AboutSection = () => {
           <h2 className="text-2xl uppercase tracking-[0.4em] opacity-30 font-bold mb-12">{t('about.title')}</h2>
           <div className="space-y-6 text-xl opacity-70 leading-relaxed">
             <p>
-              {t('about.introduction.prefix')} <span className="opacity-100 font-medium">{t('about.introduction.location')}</span>{t('about.introduction.suffix')} <span className="opacity-100 font-medium">{t('about.introduction.highlight')}</span>.
+              {t('about.introduction.prefix')} <span className="opacity-100 font-medium">{t('about.introduction.location')}</span> {t('about.introduction.suffix')} <span className="opacity-100 font-medium">{t('about.introduction.highlight')}</span>.
             </p>
             
             <p>

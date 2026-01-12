@@ -31,7 +31,7 @@ export const Footer = ({ darkMode }: FooterProps) => {
         }}
       >
         <h2 className="text-4xl md:text-5xl font-bold mb-6">{t('footer.title')}</h2>
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-2">
           <a 
             href="mailto:nicolasmdesouza@gmail.com" 
             className="text-lg lowercase font-medium px-6 py-2 border rounded-full transition-all duration-300 hover:scale-105 inline-block"
@@ -72,7 +72,7 @@ export const Footer = ({ darkMode }: FooterProps) => {
               </svg>
             </a>
           </div>
-          <p className="text-xs opacity-30 uppercase tracking-widest">
+          <p className="text-xs opacity-30 mt-6 mb-6 uppercase tracking-widest">
             {t('footer.location')}
           </p>
         </div>
