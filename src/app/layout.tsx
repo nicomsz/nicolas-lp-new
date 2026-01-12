@@ -24,6 +24,9 @@ const quicksand = Quicksand({
 export const metadata: Metadata = {
   title: "Nicolas Moraes - Full-stack Developer",
   description: "Desenvolvedor Full-stack especializado em React, Next.js, Web3 e soluções escaláveis.",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
@@ -32,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${quicksand.variable} antialiased`}
       >

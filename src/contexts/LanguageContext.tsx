@@ -21,33 +21,37 @@ const translations = {
     'about.title': 'About',
     'about.introduction.prefix': 'From',
     'about.introduction.location': 'Santa Catarina, Brazil',
-    'about.introduction.suffix': ', I\'m a developer with extensive experience in startups, combining an extraordinary product vision with expertise in',
-    'about.introduction.highlight': 'UX/UI design',
+    'about.introduction.suffix': ', I\'m a developer',
+    'about.introduction.highlight': 'passionate about entrepreneurship and startups',
     
-    'about.passion.prefix': 'As a programmer, I constantly stay updated with the latest technologies, driven by a',
-    'about.passion.highlight': 'deep passion for programming',
-    'about.passion.suffix': 'and innovation.',
+    'about.passion.prefix': 'Driven by a deep',
+    'about.passion.highlight': 'passion for innovation and building businesses',
+    'about.passion.suffix': ', I combine product vision with technical expertise to transform ideas into scalable solutions.',
     
-    'about.approach.prefix': 'My approach is',
-    'about.approach.highlight': 'extremely proactive',
-    'about.approach.suffix': ', generating positive impact in all areas: in relationships between people, team dynamics, and product development.',
+    'about.approach.prefix': 'My entrepreneurial mindset enables me to',
+    'about.approach.highlight': 'build products that create real impact',
+    'about.approach.suffix': ', deeply understanding the needs for rapid growth and market validation.',
     
-    'about.productSense.prefix': 'I have a strong',
-    'about.productSense.highlight': 'product sense focused on startups',
-    'about.productSense.suffix': ', deeply understanding the needs for rapid growth and scalability.',
+    'about.productSense.prefix': 'With a',
+    'about.productSense.highlight': 'proactive and results-driven approach',
+    'about.productSense.suffix': ', I excel in all areas: from interpersonal relationships to team dynamics and developing successful products.',
 
     'experience.title': 'Professional Path',
     'experience.stealth.role': 'Full-stack Developer',
-    'experience.stealth.date': 'Sep 2025 — Present',
-    'experience.stealth.description': 'Leading front-end development for applications with 2k+ daily active users. Architecting scalable APIs and microservices using Python and Node.js.',
+    'experience.stealth.date': 'Sep 2025 — Jan 2026',
+    'experience.stealth.description': 'At this startup, I worked on the development and maintenance of a web application with over 2,000 daily active users, contributing directly to the product\'s evolution. I was involved in both front-end and back-end development, building modern and responsive interfaces using Next.js and React best practices, as well as developing scalable APIs and microservices with Python and Node.js. Eventually, I had to leave the startup after the company decided to step back and discontinue the product.',
     
-    'experience.dooor.role': 'Head of Frontend',
+    'experience.dooor.role': 'Head of Front-end',
     'experience.dooor.date': 'Feb 2025 — Sep 2025',
-    'experience.dooor.description': 'Led a team of 3 frontend developers for blockchain solutions. Crafted intuitive UI using Next.js, Wagmi, and Viem.',
+    'experience.dooor.description': 'At this startup, I was responsible for leading the front-end team, composed of three developers in addition to myself, ensuring the delivery of high-quality solutions aligned with product goals. I contributed to blockchain and Web3 projects, including wallet integrations and smart contract interactions. I designed and implemented multiple product features, from building intuitive and responsive interfaces using Next.js and React to handling API integrations and delivering optimized UX/UI experiences. I had full ownership of the front-end development lifecycle, including authentication, routing, navigation, and interactivity, always focusing on performance, visual consistency, and a smooth user experience. I also collaborated closely with the back-end using NestJS (Node.js) to ensure scalable and efficient integrations.',
     
-    'experience.scalable.role': 'Full-stack Developer',
+    'experience.scalable.role': 'Fullstack Developer',
     'experience.scalable.date': 'Oct 2023 — Feb 2025',
-    'experience.scalable.description': 'Engineered multi-database systems for high-performance payment processing using NestJS and Prisma.',
+    'experience.scalable.description': 'At this startup, I was responsible for developing the back end of a comprehensive financial platform using NestJS, TypeScript, and Prisma ORM, with a strong focus on security, scalability, and maintainability. I implemented secure authentication, Open Finance integrations, credit operations management, and payment processing, working with a scalable multi-database architecture designed for growth. In addition, I contributed to the front end by building intuitive interfaces and actively providing UI/UX insights and product ideas that enhanced the overall user experience and business value.',
+    
+    'experience.blocklize.role': 'Web3 Front-end Developer',
+    'experience.blocklize.date': 'May 2023 — Feb 2024',
+    'experience.blocklize.description': 'I was responsible for front-end development using Next.js and SCSS, building intuitive interfaces for portfolio visualization and transaction execution involving ERC-20 and ERC-721 tokens. I implemented solutions aimed at optimizing user experience in digital asset management, with a strong focus on security, usability, and clarity during blockchain operations.',
     
     'footer.title': 'Let\'s build the future.',
     'footer.location': 'Based in Santa Catarina, Brazil',
@@ -62,33 +66,37 @@ const translations = {
     'about.title': 'Sobre',
     'about.introduction.prefix': 'Natural de',
     'about.introduction.location': 'Santa Catarina, Brasil',
-    'about.introduction.suffix': ', sou um desenvolvedor com experiência ampla em startups, combinando uma extraordinária visão de produto com expertise em',
-    'about.introduction.highlight': 'UX/UI design',
+    'about.introduction.suffix': ', sou um desenvolvedor',
+    'about.introduction.highlight': 'apaixonado por empreendedorismo e startups',
     
-    'about.passion.prefix': 'Como programador, me mantenho constantemente atualizado com as tecnologias mais recentes, movido por uma',
-    'about.passion.highlight': 'profunda paixão por programação',
-    'about.passion.suffix': 'e inovação.',
+    'about.passion.prefix': 'Movido por uma profunda',
+    'about.passion.highlight': 'paixão por inovação e criar negócios',
+    'about.passion.suffix': ', combino visão de produto com expertise técnica para transformar ideias em soluções escaláveis.',
     
-    'about.approach.prefix': 'Minha abordagem é',
-    'about.approach.highlight': 'extremamente proativa',
-    'about.approach.suffix': ', gerando impacto positivo em todos os âmbitos: nas relações entre pessoas, na dinâmica dos times e no desenvolvimento de produtos.',
+    'about.approach.prefix': 'Minha mentalidade empreendedora me permite',
+    'about.approach.highlight': 'construir produtos que geram impacto real',
+    'about.approach.suffix': ', entendendo profundamente as necessidades de crescimento rápido e validação de mercado.',
     
-    'about.productSense.prefix': 'Possuo um grande',
-    'about.productSense.highlight': 'senso de produto voltado a startups',
-    'about.productSense.suffix': ', entendendo profundamente as necessidades de crescimento rápido e escalabilidade.',
+    'about.productSense.prefix': 'Com uma abordagem',
+    'about.productSense.highlight': 'proativa e focada em resultados',
+    'about.productSense.suffix': ', atuo em todas as áreas: desde relações interpessoais até dinâmica de times e desenvolvimento de produtos de sucesso.',
     
     'experience.title': 'Trajetória Profissional',
     'experience.stealth.role': 'Desenvolvedor Full-stack',
-    'experience.stealth.date': 'Set 2025 — Presente',
-    'experience.stealth.description': 'Liderando desenvolvimento front-end para aplicações com mais de 2 mil usuários ativos diários. Arquitetando APIs escaláveis e microsserviços usando Python e Node.js.',
+    'experience.stealth.date': 'Set 2025 — Jan 2026',
+    'experience.stealth.description': 'Nessa startup, atuei no desenvolvimento e manutenção de uma aplicação web com mais de 2.000 usuários ativos diários, participando diretamente da evolução do produto. Trabalhei tanto no front-end, desenvolvendo interfaces modernas e responsivas com Next.js e boas práticas do ecossistema React, quanto no back-end, criando APIs e microserviços escaláveis com Python e Node.js. Posteriormente, precisei deixar a startup após a empresa decidir recuar e descontinuar o produto.',
     
-    'experience.dooor.role': 'Head of Frontend',
+    'experience.dooor.role': 'Head of Front-end',
     'experience.dooor.date': 'Fev 2025 — Set 2025',
-    'experience.dooor.description': 'Liderei uma equipe de 3 desenvolvedores frontend para soluções blockchain. Criando UI intuitiva usando Next.js, Wagmi e Viem.',
+    'experience.dooor.description': 'Nessa startup, fui responsável por liderar o time de front-end, composto por três desenvolvedores além de mim, garantindo a entrega de soluções de alta qualidade alinhadas aos objetivos do produto. Atuei em projetos de blockchain e Web3, incluindo integração de carteiras e interação com smart contracts. Trabalhei no design e na implementação de diversas funcionalidades do produto, desde a criação de interfaces intuitivas e responsivas com Next.js e React até a integração com APIs e a entrega de experiências UX/UI otimizadas. Tive ownership completo do ciclo de desenvolvimento front-end, incluindo autenticação, rotas, navegação e interatividade, sempre com foco em desempenho, elegância visual e uma experiência de usuário fluida. Também colaborei com o back-end utilizando NestJS (Node.js) para garantir integrações eficientes e escaláveis.',
     
-    'experience.scalable.role': 'Desenvolvedor Full-stack',
+    'experience.scalable.role': 'Desenvolvedor Fullstack',
     'experience.scalable.date': 'Out 2023 — Fev 2025',
-    'experience.scalable.description': 'Desenvolvi sistemas multi-database para processamento de pagamentos de alta performance usando NestJS e Prisma.',
+    'experience.scalable.description': 'Nessa startup, fui responsável pelo desenvolvimento do back-end de uma plataforma financeira completa, utilizando NestJS, TypeScript e Prisma ORM, com foco em segurança, escalabilidade e manutenibilidade. Implementei autenticação segura, integrações com Open Finance, gestão de operações de crédito e processamento de pagamentos, trabalhando com uma arquitetura multi-database pensada para alto volume e crescimento. Além disso, atuei no front-end, desenvolvendo interfaces intuitivas e contribuindo ativamente com insights de UI/UX e ideias de produto que ajudaram a melhorar a experiência do usuário e agregar valor ao negócio.',
+    
+    'experience.blocklize.role': 'Desenvolvedor Front-end Web3',
+    'experience.blocklize.date': 'Mai 2023 — Fev 2024',
+    'experience.blocklize.description': 'Fui responsável pelo desenvolvimento do front-end utilizando Next.js e SCSS, criando interfaces intuitivas para visualização de portfólio e execução de transações com tokens ERC-20 e ERC-721. Implementei soluções focadas na otimização da experiência do usuário no gerenciamento de ativos digitais, com atenção especial à segurança, usabilidade e clareza durante operações em blockchain.',
     
     'footer.title': 'Vamos construir o futuro.',
     'footer.location': 'Baseado em Santa Catarina, Brasil',
@@ -100,12 +108,28 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>('en')
 
+  React.useEffect(() => {
+    const savedLanguage = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('language='))
+      ?.split('=')[1] as Language | undefined
+    
+    if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'pt')) {
+      setLanguage(savedLanguage)
+    }
+  }, [])
+
+  const handleSetLanguage = (lang: Language) => {
+    setLanguage(lang)
+    document.cookie = `language=${lang}; path=/; max-age=31536000` // 1 year
+  }
+
   const t = (key: string): string => {
     return translations[language][key as keyof typeof translations['en']] || key
   }
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   )
@@ -118,4 +142,3 @@ export function useLanguage() {
   }
   return context
 }
-

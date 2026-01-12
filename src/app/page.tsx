@@ -16,6 +16,17 @@ export default function Portfolio() {
   const { t } = useLanguage()
 
   useEffect(() => {
+    const savedDarkMode = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('darkMode='))
+      ?.split('=')[1]
+    
+    if (savedDarkMode !== undefined) {
+      setDarkMode(savedDarkMode === 'true')
+    }
+  }, [])
+
+  useEffect(() => {
     let i = 0
     const interval = setInterval(() => {
       setName(fullName.slice(0, i))
@@ -31,6 +42,7 @@ export default function Portfolio() {
     } else {
       document.documentElement.classList.remove('dark')
     }
+    document.cookie = `darkMode=${darkMode}; path=/; max-age=31536000` // 1 year
   }, [darkMode])
 
   useEffect(() => {
@@ -77,6 +89,13 @@ export default function Portfolio() {
             company="Scalable | Fintech"
             role={t('experience.scalable.role')}
             description={t('experience.scalable.description')}
+          />
+
+          <ExperienceCard
+            date={t('experience.blocklize.date')}
+            company="Blocklize | Web3"
+            role={t('experience.blocklize.role')}
+            description={t('experience.blocklize.description')}
           />
         </section>
       </main>
