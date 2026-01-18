@@ -25,7 +25,7 @@ export const Footer = ({ darkMode }: FooterProps) => {
         </>
       )}
       <footer 
-        className="max-w-4xl h-[300px] mx-auto p-12 rounded-[40px] border text-center relative dark:bg-black white:bg-white"
+        className="max-w-4xl h-[300px] mx-auto p-12 rounded-[40px] mb-4 border text-center relative dark:bg-[#0A0A0A] white:bg-white"
         style={{ 
           borderColor: 'var(--border)'
         }}
