@@ -43,7 +43,7 @@ const translations = {
     
     'experience.dooor.role': 'Head of Front-end',
     'experience.dooor.date': 'Feb 2025 — Sep 2025',
-    'experience.dooor.description': 'At this startup, I was responsible for leading the front-end team, composed of three developers in addition to myself, ensuring the delivery of high-quality solutions aligned with product goals. I contributed to blockchain and Web3 projects, including wallet integrations and smart contract interactions. I designed and implemented multiple product features, from building intuitive and responsive interfaces using Next.js and React to handling API integrations and delivering optimized UX/UI experiences. I had full ownership of the front-end development lifecycle, including authentication, routing, navigation, and interactivity, always focusing on performance, visual consistency, and a smooth user experience. I also collaborated closely with the back-end using NestJS (Node.js) to ensure scalable and efficient integrations.',
+    'experience.dooor.description': 'Led a front-end team of four, delivering high-quality solutions aligned with product goals. Contributed to blockchain and Web3 projects, including wallet integrations and smart contract interactions. Had full ownership of the front-end lifecycle — authentication, routing, navigation, and interactivity — using Next.js and React, always focusing on performance and a smooth user experience.',
     
     'experience.scalable.role': 'Fullstack Developer',
     'experience.scalable.date': 'Oct 2023 — Feb 2025',
@@ -88,7 +88,7 @@ const translations = {
     
     'experience.dooor.role': 'Head of Front-end',
     'experience.dooor.date': 'Fev 2025 — Set 2025',
-    'experience.dooor.description': 'Nessa startup, fui responsável por liderar o time de front-end, composto por três desenvolvedores além de mim, garantindo a entrega de soluções de alta qualidade alinhadas aos objetivos do produto. Atuei em projetos de blockchain e Web3, incluindo integração de carteiras e interação com smart contracts. Trabalhei no design e na implementação de diversas funcionalidades do produto, desde a criação de interfaces intuitivas e responsivas com Next.js e React até a integração com APIs e a entrega de experiências UX/UI otimizadas. Tive ownership completo do ciclo de desenvolvimento front-end, incluindo autenticação, rotas, navegação e interatividade, sempre com foco em desempenho, elegância visual e uma experiência de usuário fluida. Também colaborei com o back-end utilizando NestJS (Node.js) para garantir integrações eficientes e escaláveis.',
+    'experience.dooor.description': 'Liderei um time de front-end de quatro pessoas, garantindo entregas de alta qualidade alinhadas aos objetivos do produto. Atuei em projetos de blockchain e Web3, incluindo integração de carteiras e interação com smart contracts. Tive ownership completo do ciclo front-end — autenticação, rotas, navegação e interatividade — utilizando Next.js e React, sempre com foco em desempenho e experiência de usuário fluida.',
     
     'experience.scalable.role': 'Desenvolvedor Fullstack',
     'experience.scalable.date': 'Out 2023 — Fev 2025',

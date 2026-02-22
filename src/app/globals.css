@@ -23,7 +23,7 @@
                    radial-gradient(at 100% 100%, rgba(18,18,18,1) 0, transparent 50%);
     --text-main: #ffffff;
     --text-gradient: linear-gradient(180deg, #ffffff 0%, #888888 100%);
-    --card-bg: rgba(28, 28, 30, 0.5);
+    --card-bg: #16161a;
     --card-gradient: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 50%, #151515 100%);
     --brandGradient: linear-gradient(90deg, #1a1a1a 0%, #000000 100%);
     --radialBlue: radial-gradient(circle, rgba(100, 100, 100, 1) 0%, rgba(60, 60, 60, 0.3) 50%, transparent 70%);

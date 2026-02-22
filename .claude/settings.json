@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next build:*)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:blog.olivierlarose.com)",
+      "WebFetch(domain:www.ui-layouts.com)"
+    ]
+  }
+}

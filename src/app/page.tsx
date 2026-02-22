@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { Navbar } from '@/components/Navbar'
 import { HeroSection } from '@/components/HeroSection'
 import { AboutSection } from '@/components/AboutSection'
-import { ExperienceCard } from '@/components/ExperienceCard'
+import { ExperienceStack } from '@/components/ExperienceStack'
 import { Footer } from '@/components/Footer'
 
 export default function Portfolio() {
@@ -67,35 +67,36 @@ export default function Portfolio() {
 
         <AboutSection />
 
-        <section id="exp" className="space-y-40">
+        <section id="exp" className="space-y-12">
           <h2 className="text-2xl uppercase tracking-[0.4em] opacity-30 font-bold">{t('experience.title')}</h2>
 
-          <ExperienceCard
-            date={t('experience.stealth.date')}
-            company="Stealth Startup"
-            role={t('experience.stealth.role')}
-            description={t('experience.stealth.description')}
-          />
-
-          <ExperienceCard
-            date={t('experience.dooor.date')}
-            company="DOOOR | Web3"
-            role={t('experience.dooor.role')}
-            description={t('experience.dooor.description')}
-          />
-
-          <ExperienceCard
-            date={t('experience.scalable.date')}
-            company="Scalable | Fintech"
-            role={t('experience.scalable.role')}
-            description={t('experience.scalable.description')}
-          />
-
-          <ExperienceCard
-            date={t('experience.blocklize.date')}
-            company="Blocklize | Web3"
-            role={t('experience.blocklize.role')}
-            description={t('experience.blocklize.description')}
+          <ExperienceStack
+            items={[
+              {
+                date: t('experience.stealth.date'),
+                company: 'Stealth Startup',
+                role: t('experience.stealth.role'),
+                description: t('experience.stealth.description'),
+              },
+              {
+                date: t('experience.dooor.date'),
+                company: 'DOOOR | Web3',
+                role: t('experience.dooor.role'),
+                description: t('experience.dooor.description'),
+              },
+              {
+                date: t('experience.scalable.date'),
+                company: 'Scalable | Fintech',
+                role: t('experience.scalable.role'),
+                description: t('experience.scalable.description'),
+              },
+              {
+                date: t('experience.blocklize.date'),
+                company: 'Blocklize | Web3',
+                role: t('experience.blocklize.role'),
+                description: t('experience.blocklize.description'),
+              },
+            ]}
           />
         </section>
       </main>

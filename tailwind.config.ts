@@ -14,7 +14,7 @@ export default {
         'border': 'var(--border)',
       },
       fontFamily: {
-        sans: ['Inter', 'SF Pro Display', 'sans-serif'],
+        sans: ['var(--font-inter)', 'Inter', 'SF Pro Display', 'sans-serif'],
         quicksand: ['var(--font-quicksand)', 'sans-serif'],
       },
       backgroundImage: {
