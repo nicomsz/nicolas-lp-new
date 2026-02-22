@@ -40,7 +40,7 @@ const StackCard = ({
     >
       <motion.div
         style={{ scale }}
-        className="relative w-full h-[320px] origin-top overflow-hidden rounded-2xl p-8 md:p-10 shadow-xl"
+        className="relative w-full h-[420px] md:h-[320px] origin-top overflow-hidden rounded-2xl p-8 md:p-10 shadow-xl"
       >
         <div
           className="absolute inset-0 rounded-2xl"
