@@ -260,6 +260,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 /* Sobre */
 .about__in{display:grid;row-gap:clamp(72px,12vw,168px);padding-top:clamp(84px,11vw,160px);padding-bottom:calc(clamp(72px,10vw,150px) + var(--radius))}
 .block{display:grid;row-gap:clamp(20px,3vw,40px);scroll-margin-top:72px}
+.about__lead{max-width:30em;font-size:clamp(1.25rem,1.9vw,1.625rem);line-height:1.4;font-weight:500;letter-spacing:-.01em;text-wrap:pretty}
 .about__more{max-width:36em;font-size:clamp(1.0625rem,1.3vw,1.25rem);line-height:1.5;color:var(--mute);text-wrap:pretty}
 .manifesto{max-width:21em;font-family:var(--font-display);font-size:clamp(1.75rem,4.2vw,3.75rem);font-weight:640;line-height:1.1;letter-spacing:-.035em;text-wrap:pretty}
 .w{opacity:clamp(.44,calc(.44 + .56 * (var(--p,1) * var(--span,1) - var(--i,0))),1)}
@@ -518,7 +519,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
     <div class="in about__in">
       <div class="block">
         <h2 class="h2">Sobre mim</h2>
-        <p class="manifesto" data-manifesto>Não gosto de ficar limitado a uma parte do desenvolvimento. Gosto de entender o problema, pensar na experiência, construir a interface, desenvolver o back-end e acompanhar o produto até chegar às mãos dos usuários.</p>
+        <p class="about__lead" data-manifesto>Não gosto de ficar limitado a uma parte do desenvolvimento. Gosto de entender o problema, pensar na experiência, construir a interface, desenvolver o back-end e acompanhar o produto até chegar às mãos dos usuários.</p>
         <p class="about__more">Tenho um interesse especial por interfaces bem construídas, arquitetura de software e novas possibilidades com inteligência artificial. Também incorporo agentes de IA ao meu fluxo de desenvolvimento para explorar ideias, acelerar processos e ampliar o que consigo construir.</p>
       </div>
 
@@ -638,19 +639,8 @@ setBrand(0);
   setInterval(tick, 20000);
 }
 
-/* ---------- Manifesto: uma palavra por span, acesa conforme o scroll ---------- */
+/* ---------- Texto do "Sobre mim": só é medido (a posição dele entra na conta do scroll) ---------- */
 const manifesto = $("[data-manifesto]");
-{
-  const words = manifesto.textContent.trim().split(/\s+/);
-  manifesto.replaceChildren(...words.flatMap((word, i) => {
-    const span = document.createElement("span");
-    span.className = "w";
-    span.textContent = word;
-    span.style.setProperty("--i", i);
-    return i ? [" ", span] : [span];
-  }));
-  manifesto.style.setProperty("--span", words.length + 4);
-}
 
 /* ---------- Linha do tempo da cena: tudo é função pura do scroll ---------- */
 const AR = .47;                                        // proporção do aparelho
