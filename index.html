@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f1f2f4">
 <title>Portfólio Nicolas Moraes</title>
-<meta name="description" content="Nicolas Moraes de Souza constrói aplicativos web e mobile, da interface ao banco de dados. React Native, Next.js, NestJS e agentes de IA.">
+<meta name="description" content="Nicolas Moraes de Souza desenvolve experiências digitais de ponta a ponta: web e mobile, da interface à arquitetura e infraestrutura, com inteligência artificial.">
 <script>document.documentElement.classList.add("js","pin")</script>
 <style>
 /* Mona Sans, a tipografia da GitHub. Copyright 2022 The Mona Sans Project Authors (https://github.com/github/mona-sans).
@@ -53,6 +53,7 @@ button{font:inherit;color:inherit}
 /* Escala tipográfica: rótulo 13, corpo 17, apoio 20, depois títulos fluidos. */
 .label{font-size:.8125rem;line-height:1.4;font-weight:500;color:var(--mute);font-variant-numeric:tabular-nums}
 .lede{max-width:33em;font-size:clamp(1.125rem,1.4vw,1.3125rem);line-height:1.45;text-wrap:pretty}
+.hero .lede{font-size:1.0625rem}                                     /* em tela estreita o subtítulo é longo: 1 px a menos mantém o aparelho na primeira tela */
 .h2{font-family:var(--font-display);font-size:clamp(2rem,4.6vw,3.5rem);font-weight:750;line-height:1;letter-spacing:-.035em}
 .big{display:block;font-family:var(--font-display);font-weight:800;line-height:.94;letter-spacing:-.045em;white-space:nowrap}
 
@@ -323,6 +324,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
   .hero__visual{grid-column:9/13;grid-row:1/4}
   .hero__title{grid-column:1/9;grid-row:2;align-self:end}
   .hero__body{grid-column:1/7;grid-row:3}
+  .hero .lede{font-size:clamp(1.125rem,1.4vw,1.3125rem)}
   .hero .big{font-size:min(7.4vw,11.4vh);font-size:min(7.4vw,11.4svh)}
 
   .stage__in{grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-rows:minmax(0,1fr);column-gap:24px;align-items:center;padding-top:96px;padding-bottom:48px}
@@ -409,7 +411,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
         </h1>
 
         <div class="hero__body">
-          <p class="lede">Desenvolvo experiências web e mobile, conectando engenharia, design e inteligência artificial. Da concepção à publicação, construo soluções completas, explorando tecnologias e transformando problemas reais em produtos.</p>
+          <p class="lede">Atuo em diferentes etapas da construção de um produto, da interface à arquitetura e infraestrutura. Trabalho com tecnologias web e mobile, explorando novas ferramentas e incorporando inteligência artificial para criar soluções, experimentar ideias e levar produtos à produção.</p>
           <div class="cta">
             <a class="btn btn--fill" href="#stack">Ver a stack</a>
             <a class="btn" href="https://www.linkedin.com/in/nicolasmsouza">LinkedIn</a>
@@ -652,6 +654,9 @@ const SEG = [0, .185, .293, .402, .543, QMAX];         // limites dos cinco pass
 const NB = [.55, .645], XF = [.625, .675], ZM = [.665, .78], HAND = .795;   // notebook abre, tela acende no monitor, zoom, troca 3D -> HTML
 const span = (Q, r) => clamp((Q - r[0]) / (r[1] - r[0]));
 const exOf = Q => easeIO(clamp(Q / .07)) * (1 - easeIO(clamp((Q - .49) / .065)));          // camadas abrem, depois fecham
+/* Viagem do aparelho do herói ao palco em tela estreita, em função do scroll do herói (0 a 1): primeiro ele sobe junto
+   com a página, até aparecer inteiro, e só então desce para o lugar no palco. */
+const NARROW0 = .25, narrowM = H => easeIO(clamp((H - NARROW0) / (1 - NARROW0)));
 const layerOf = (Q, j) => easeOut(clamp((Q - (.079 + j * .108)) / .047));                  // cada camada acende no seu passo
 
 const el = {
@@ -902,6 +907,54 @@ async function initGL() {
   const camera = new THREE.PerspectiveCamera();
   let cw = 1, ch = 1, boxH = 1, cLeft = 0, upp = 1, bw = 0, bh = 0, bandY = 0, bandCss = 0, lastVTop = 0, dead = false;
   const wx = px => px * upp, wy = py => -py * upp;
+
+  /* Viagem em tela estreita sem depender do ritmo do JavaScript. O scroll do celular anda numa thread própria, a 60 ou
+     120 Hz; o JavaScript desenha depois, e no modo de pouca bateria do iPhone só 30 vezes por segundo. Enquanto a caixa
+     rolava com a página e o JavaScript deslocava o aparelho dentro dela, qualquer diferença entre os dois ritmos aparecia
+     como tremor. Aqui a descida vira uma animação de transform presa ao scroll (animation-timeline), que o navegador
+     aplica no compositor junto com o próprio scroll: o JavaScript desenha o aparelho sempre no lugar final (o do palco)
+     e a caixa inteira é deslocada de volta ao longo do caminho. Rotação, escala e a troca para o traço continuam no
+     JavaScript, onde um frame de atraso não se vê. Sem suporte à função, em tela larga ou com mouse (a roda anda aos
+     saltos, e ali a suavização do JavaScript faz falta), vale o caminho antigo.
+
+     A curva é a mesma de narrowM: parada até NARROW0 e depois easeIO, que são dois arcos cúbicos (4t³ e o espelho dele).
+     Cada arco é exatamente um cubic-bezier com x linear (x1 = 1/3, x2 = 2/3), então três trechos de keyframe bastam. */
+  const pathCan = !!(coarse && window.CSS && CSS.supports && CSS.supports("animation-timeline: scroll()") && CSS.supports("animation-range: 0px 1px") && window.DOMMatrixReadOnly);
+  const pathStyle = pathCan ? document.head.appendChild(document.createElement("style")) : null;
+  let pathOn = false, pathDy = 0, pathD = 0, pathBand = 0, pathCss = "", pathState = 0, pathGood = 0, pathBad = 0, pathY = -1, sub = 0, lastScroll = -1;
+  function syncPath() {
+    // Do centro da âncora do herói ao centro da âncora do palco, em px da caixa. O compositor leva um múltiplo de 8 px
+    // (com a página parada no topo o canvas continua alinhado aos pixels do aparelho); o resto, de até 4 px, é do desenho.
+    const slot = M.T + A.stage.y + A.stage.h / 2, slack = Math.max(0, ch - M.pinH);
+    const dy = slot - (A.hero.y + A.hero.h / 2), D = Math.round(dy / 8) * 8;
+    const on = pathCan && pathState >= 0 && !onContact && root.classList.contains("pin") && !(A.stage.x > innerWidth * .3) && D >= 48;
+    if (!on) { if (pathOn) { pathOn = false; view.classList.remove("is-path"); } return; }
+    pathDy = dy; pathD = D;
+    // Durante a viagem o aparelho não sai do lugar dentro da caixa: a faixa fica parada em volta dele, já onde o palco precisa.
+    pathBand = Math.max(0, Math.min(Math.floor(M.T / 8) * 8, Math.max(Math.ceil((M.T - slack) / 8) * 8, Math.round((slot - ch / 2) / 8) * 8)));
+    const at = v => `transform:translate3d(0,${v}px,0)`, mid = (NARROW0 + (1 - NARROW0) / 2) * 100;
+    const css = `@keyframes gl-path{0%{${at(-pathD)}}${NARROW0 * 100}%{${at(-pathD)};animation-timing-function:cubic-bezier(.3333333,0,.6666667,0)}${mid}%{${at(-pathD / 2)};animation-timing-function:cubic-bezier(.3333333,1,.6666667,1)}100%{${at(0)}}}`
+      + `.pin .gl.is-path:not(.gl--contact){animation:gl-path 1ms linear both;animation-timeline:scroll(root block);animation-range:0px ${M.T}px}`;
+    if (css !== pathCss) { pathCss = css; pathStyle.textContent = css; pathY = -1; }
+    if (!pathOn) { pathOn = true; view.classList.add("is-path"); pathY = -1; }
+  }
+  /* Rede de segurança, em duas etapas. Etapa 0: até o navegador mostrar que aplica a animação, o desenho usa o deslocamento
+     que está de fato aplicado (lido do estilo computado), então a imagem fica certa mesmo que ela demore ou não valha.
+     Etapa 1: o desenho já confia na fórmula, e uma conferência segue lendo o valor aplicado até ver, no meio do caminho,
+     que ele acompanha o scroll. Só contam os frames em que o valor esperado está longe o bastante das pontas para a
+     comparação dizer alguma coisa. Se falhar em qualquer etapa, a viagem volta a ser do JavaScript. Depois disso, nada é lido. */
+  function checkPath(y) {
+    const pk = 1 - narrowM(y / M.T), step = pathY < 0 ? 1e4 : Math.abs(y - pathY), tol = 3 + 3.5 * step;
+    const tells = (pathState ? Math.min(pk, 1 - pk) : pk) * pathD >= 2 * tol;
+    pathY = y;
+    if (pathState && !tells) return 0;                                // etapa 1 e este frame não diria nada: nem lê
+    const real = new DOMMatrixReadOnly(getComputedStyle(view).transform).m42;
+    if (tells) {
+      if (Math.abs(real + pathD * pk) <= tol) { pathBad = 0; if (++pathGood >= (pathState ? 4 : 3)) { pathState++; pathGood = 0; } }
+      else if (++pathBad >= (pathState ? 4 : 30)) { pathState = -1; syncPath(); return 0; }   // no começo o navegador pode levar alguns frames para aplicar
+    }
+    return real;
+  }
   /* Resolução interna. O teto depende do aparelho; o orçamento de pixels limita o custo por frame.
      deviceMemory só existe no Chrome: sem ele (iPhone, iPad), vale o nível mais alto. */
   const SLACK = .3;                                                   // quanto a faixa passa da altura da viewport
@@ -916,6 +969,7 @@ async function initGL() {
     // Na cena, a caixa tem a altura do herói mais uma tela, e o canvas é só uma faixa dela. No contato, a caixa é o cartão.
     ch = onContact ? boxH : Math.min(boxH, Math.ceil(M.pinH * (1 + SLACK) / 8) * 8);
     if (ch !== bandCss) { bandCss = ch; canvas.style.height = ch + "px"; }
+    syncPath();
     const mp = tier.mp * (coarse && Math.min(innerWidth, innerHeight) >= 700 ? 1.5 : 1);        // tablets têm mais tela e mais GPU
     const want = Math.min(devicePixelRatio || 1, tier.cap, Math.sqrt(mp / (cw * ch)), maxDim / Math.max(cw, ch));
     const ratio = Math.max(.75, Math.floor(want * 4 + 1e-6) / 4);
@@ -1315,23 +1369,38 @@ async function initGL() {
     // Da chegada da tela em HTML até o fim do palco, o 3D não tem nada em cena: limpa uma vez e para de desenhar.
     if (!onScreen || (!onContact && S.Q >= HAND)) { if (was) { renderer.clear(); was = false; } return; }
 
+    // Com a viagem no compositor (syncPath), a caixa inteira está deslocada ao longo do caminho: aqui se calcula o mesmo
+    // deslocamento a partir do scroll, só para saber de onde o olho enxerga e o que falta o desenho compensar.
+    const real = pathOn && pathState < 2 && y < M.T ? checkPath(y) : 0;       // pode desligar o modo (pathOn)
+    const hero = pathOn && y < M.T;
+    const pk = hero ? 1 - narrowM(y / M.T) : 0;                               // 1 no herói, 0 encaixado no palco
+    const shift = !hero ? 0 : pathState ? -pathD * pk : real;                 // quanto a caixa está deslocada, em px
+    const still = y === lastScroll; lastScroll = y;
     // Onde o canvas está na viewport. Ele rola com o documento; aqui só se calcula de onde o olho enxerga.
-    const top = onContact ? M.contactTop - y : y < M.T ? -y : y > M.T + M.dist ? M.dist - y : -M.T;
+    const top = (onContact ? M.contactTop - y : y < M.T ? -y : y > M.T + M.dist ? M.dist - y : -M.T) + shift;
     // A faixa (canvas) fica parada dentro da caixa e rola com ela. Só é reposicionada quando a viewport chega perto de uma
     // das bordas; aí salta deixando a folga inteira à frente do movimento, e o desenho compensa o salto no mesmo frame.
     let Y = 0;
     if (!onContact) {
       const vTop = -top, room = Math.max(0, boxH - ch), slack = Math.max(0, ch - M.pinH);
       const step = vTop - lastVTop; lastVTop = vTop;                  // quanto a viewport andou desde o último frame
-      const above = vTop - bandY, below = bandY + ch - vTop - M.pinH;
-      const guard = Math.min(Math.max(0, slack - 24), 12 + Math.abs(step) * 1.6);
-      Y = bandY;
-      if (above < 0 || below < 0 || (step > 0 && below < guard) || (step < 0 && above < guard)) {
-        Y = step > 0 ? vTop - 16 : step < 0 ? vTop - slack + 16 : vTop - slack / 2;
-        Y = Math.min(room, Math.max(0, Math.round(Y / 8) * 8));
+      if (hero && pathState) {
+        // Na viagem a faixa não se mexe. Com o scroll parado no meio do caminho, o deslocamento da caixa cai entre dois
+        // pixels do aparelho: a faixa desconta essa fração (e o desenho a devolve), para o canvas não ser reamostrado.
+        if (still) { const d = devicePixelRatio || 1; sub = shift - Math.round(shift * d) / d; if (Math.abs(sub) < .002) sub = 0; }
+        Y = pathBand - sub;
+      } else {
+        const above = vTop - bandY, below = bandY + ch - vTop - M.pinH;
+        const guard = Math.min(Math.max(0, slack - 24), 12 + Math.abs(step) * 1.6);
+        Y = bandY;
+        if (sub || bandY > room || above < 0 || below < 0 || (step > 0 && below < guard) || (step < 0 && above < guard)) {
+          sub = 0;
+          Y = step > 0 ? vTop - 16 : step < 0 ? vTop - slack + 16 : vTop - slack / 2;
+          Y = Math.min(room, Math.max(0, Math.round(Y / 8) * 8));
+        }
       }
     }
-    if (Y !== bandY) { bandY = Y; canvas.style.transform = `translate3d(0,${Y}px,0)`; }
+    if (Y !== bandY) { bandY = Y; canvas.style.transform = `translate3d(0,${+Y.toFixed(4)}px,0)`; }
     viewY = -(vh / 2 - top) * upp; viewHalf = vh / 2 * upp;
     aim((innerWidth / 2 - cLeft) * upp, viewY);
 
@@ -1363,13 +1432,13 @@ async function initGL() {
       // Em tela estreita ele é o último elemento do herói, logo acima da folha: o caminho é uma descida curta, sem cruzar texto.
       const wide = A.stage.x > innerWidth * .3;                       // palco em duas colunas
       const gate = smooth(.9, 1, S.H);
-      // Em tela estreita ele primeiro sobe junto com a página, até aparecer inteiro, e só então desce para o lugar no palco.
-      const m = wide ? easeIO(S.H) : easeIO(clamp((S.H - .25) / .75)), swing = Math.sin(Math.PI * m);
+      const m = wide ? easeIO(S.H) : narrowM(S.H), swing = Math.sin(Math.PI * m);
       lit = exOf(S.Q) * gate;
       open = Math.max(.2 * (1 - m) * I, lit);
 
       // O aparelho principal: herói -> palco -> camadas abertas -> centro da grade
       mixP(P0, PH, PS, m);
+      if (pathOn) P0.y = PS.y + (pathDy * pk + shift) * upp;          // a descida é do compositor; aqui só o que ele não levou
       P0.ry += swing * .72; P0.rx -= swing * .1; P0.rz -= swing * .1;
       P0.z += swing * .9 * P0.s;
       P0.y += Math.sin(t * .8) * .035 * P0.s * idle * (1 - m) - (1 - I) * .5 * P0.s;
