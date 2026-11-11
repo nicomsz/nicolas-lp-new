@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f1f2f4">
 <title>Portfólio Nicolas Moraes</title>
 <meta name="description" content="Nicolas Moraes de Souza constrói aplicativos web e mobile, da interface ao banco de dados. React Native, Next.js, NestJS e agentes de IA.">
 <script>document.documentElement.classList.add("js","pin")</script>
@@ -29,8 +30,9 @@
 }
 
 *,*::before,*::after{box-sizing:border-box}
-/* O fundo da raiz é o do rodapé (preto): é ele que aparece quando o celular estica a página além do fim. O corpo continua claro. */
-html{background:var(--night);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* O fundo da raiz é a cor que o Safari do iPhone mostra atrás da barra de baixo e a que aparece quando a página estica
+   além do fim. Nasce claro, como o herói; o script troca para preto enquanto uma seção preta está na borda de baixo da tela. */
+html{background:var(--paper);-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:1.0625rem;line-height:1.5;font-weight:400;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 main{overflow-x:clip}
@@ -82,16 +84,16 @@ button{font:inherit;color:inherit}
 @media (hover:hover){.btn:hover{box-shadow:inset 0 0 0 1px var(--ink)}}
 .brandbox{display:grid;row-gap:10px;justify-items:start;align-self:end}
 .brand{position:relative;display:grid;place-items:center;width:44px;height:44px;margin-right:4px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;transition:box-shadow .2s}
-.brand__i{width:24px;height:24px;overflow:visible}
-.brand__orbit{transform-origin:16px 16px;animation:orbit 9s linear infinite}
+.brand__spin{display:grid}
+/* O giro lento é do <svg> inteiro, não de um grupo dentro dele: assim a animação roda no compositor.
+   (Girar um elemento de dentro do SVG refazia o layout a cada frame.) */
+.brand__i{width:24px;height:24px;overflow:visible;animation:orbit 9s linear infinite}
 .brand__i circle{mix-blend-mode:multiply;transition:fill .4s}
 .brand__a{fill:var(--accent)}
 .brand__b{fill:color-mix(in srgb,var(--accent),#3b6cff 70%)}
 .brand__c{fill:color-mix(in srgb,var(--accent),#ffcc33 70%)}
 .nav.is-stuck .brand__i circle,html:not(.js) .brand__i circle{mix-blend-mode:screen}
-.brand.is-spin .brand__i{animation:spin .6s var(--ease)}
 @keyframes orbit{to{transform:rotate(360deg)}}
-@keyframes spin{from{transform:rotate(-180deg) scale(.8)}to{transform:none}}
 .brand:active{transform:scale(.97)}
 .brand:active .i{transform:rotate(180deg)}
 @media (hover:hover){.brand:hover{box-shadow:inset 0 0 0 1px currentColor}}
@@ -99,7 +101,11 @@ button{font:inherit;color:inherit}
 /* Bloco visual: a âncora é só uma caixa de layout; o canvas lê a posição dela e desenha o aparelho ali. */
 .visual{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;column-gap:16px;height:min(36vh,310px);height:min(36svh,310px)}
 .anchor{height:100%;aspect-ratio:47/100;pointer-events:none}
-.hero__visual{grid-template-columns:minmax(0,1fr);justify-items:center;height:min(30vh,250px);height:min(30svh,250px)}   /* no celular: aparelho centralizado, sem coluna vazia ao lado */
+/* No celular o herói é texto primeiro: nome, título, parágrafo e botões. O aparelho vem depois, grande e centralizado,
+   na passagem para o palco: o herói só reserva o topo dele (o resto passa por cima da folha preta, que sobe por trás).
+   Em tela larga ele volta para a coluna da direita (regras lá embaixo). */
+.hero__visual{order:4;grid-template-columns:minmax(0,1fr);justify-items:center;height:min(50vh,410px);height:min(50svh,410px);margin:12px 0 calc(min(50vh,410px) * -.62);margin-bottom:calc(min(50svh,410px) * -.62)}
+.no-gl .hero__visual{margin-bottom:0}
 .fallback{display:none;width:100%;height:100%;padding:5%;border-radius:15% / 7%;background:#17191d;transform:rotate(6deg)}
 .fallback::before{content:"";display:block;width:100%;height:100%;border-radius:12% / 5.6%;background:var(--accent)}
 .no-gl .fallback{display:block}
@@ -262,8 +268,6 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 .block{display:grid;row-gap:clamp(20px,3vw,40px);scroll-margin-top:72px}
 .about__lead{max-width:30em;font-size:clamp(1.25rem,1.9vw,1.625rem);line-height:1.4;font-weight:500;letter-spacing:-.01em;text-wrap:pretty}
 .about__more{max-width:36em;font-size:clamp(1.0625rem,1.3vw,1.25rem);line-height:1.5;color:var(--mute);text-wrap:pretty}
-.manifesto{max-width:21em;font-family:var(--font-display);font-size:clamp(1.75rem,4.2vw,3.75rem);font-weight:640;line-height:1.1;letter-spacing:-.035em;text-wrap:pretty}
-.w{opacity:clamp(.44,calc(.44 + .56 * (var(--p,1) * var(--span,1) - var(--i,0))),1)}
 .trail{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:20px;border-bottom:1px solid var(--line)}
 .trail li{display:grid;grid-template-columns:subgrid;grid-column:1/-1;row-gap:2px;align-items:start;padding:16px 0;border-top:1px solid var(--line)}
 .trail__when{grid-row:1/4;padding-top:.55em;white-space:nowrap}
@@ -311,7 +315,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 
   .visual{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;row-gap:24px;justify-items:center;align-self:center;height:auto}
   .visual .anchor{order:-1;height:min(60vh,620px);height:min(60svh,620px)}
-  .hero__visual{height:auto}
+  .hero__visual{order:0;height:auto;margin:0}
   .visual .brandbox{justify-items:center;text-align:center}
 
   .hero__in{grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto minmax(0,1fr) auto;column-gap:24px;row-gap:28px;min-height:calc(100vh - 30px);min-height:calc(100svh - 30px);padding-top:108px;padding-bottom:calc(var(--radius) + 44px)}
@@ -373,7 +377,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
     <a class="nav__mark" href="#topo" aria-label="nicomsz, voltar ao topo">nicomsz</a>
     <nav class="nav__links" aria-label="Seções">
       <button class="brand" type="button" data-brand>
-        <svg class="brand__i" viewBox="0 0 32 32" aria-hidden="true"><g class="brand__orbit"><circle class="brand__a" cx="16" cy="8.5" r="6"/><circle class="brand__b" cx="22.5" cy="20" r="6"/><circle class="brand__c" cx="9.5" cy="20" r="6"/></g></svg>
+        <span class="brand__spin"><svg class="brand__i" viewBox="0 0 32 32" aria-hidden="true"><circle class="brand__a" cx="16" cy="8.5" r="6"/><circle class="brand__b" cx="22.5" cy="20" r="6"/><circle class="brand__c" cx="9.5" cy="20" r="6"/></svg></span>
         <span class="sr" data-brand-name>Brasa</span>
       </button>
       <a href="#stack">Stack</a>
@@ -625,7 +629,7 @@ function setBrand(i) {
 }
 brandBtns.forEach(btn => btn.addEventListener("click", () => {
   setBrand(sel + 1);
-  btn.classList.remove("is-spin"); void btn.offsetWidth; btn.classList.add("is-spin");   // reinicia o giro a cada clique
+  if (!reduce) $(".brand__spin", btn).animate([{ transform: "rotate(-180deg) scale(.8)" }, { transform: "none" }], { duration: 600, easing: "cubic-bezier(.2,.7,.2,1)" });   // giro rápido a cada clique
 }));
 setBrand(0);
 
@@ -637,9 +641,6 @@ setBrand(0);
   tick();
   setInterval(tick, 20000);
 }
-
-/* ---------- Texto do "Sobre mim": só é medido (a posição dele entra na conta do scroll) ---------- */
-const manifesto = $("[data-manifesto]");
 
 /* ---------- Linha do tempo da cena: tudo é função pura do scroll ---------- */
 const AR = .47;                                        // proporção do aparelho
@@ -654,12 +655,12 @@ const exOf = Q => easeIO(clamp(Q / .07)) * (1 - easeIO(clamp((Q - .49) / .065)))
 const layerOf = (Q, j) => easeOut(clamp((Q - (.079 + j * .108)) / .047));                  // cada camada acende no seu passo
 
 const el = {
-  scene: $(".scene"), hero: $("[data-hero]"), stage: $("[data-stage]"), contact: $(".contact"),
+  scene: $(".scene"), hero: $("[data-hero]"), stage: $("[data-stage]"), about: $(".about"), contact: $(".contact"),
   aHero: $('[data-anchor="hero"]'), aStage: $('[data-anchor="stage"]'), aContact: $('[data-anchor="contact"]'),
   tab: $$(".tabs li"), step: $$(".step"), nav: $(".nav"), view: $(".gl"), canvas: $(".gl canvas")
 };
 /* T = scroll em que o palco encaixa no topo; dist = quanto ele fica preso; end = fim da trilha. */
-const M = { T: 1, pinH: 1, unit: 1, dist: 1, end: 1, contactTop: 0, contactH: 1, mfTop: 0, mfH: 1 };
+const M = { T: 1, pinH: 1, unit: 1, dist: 1, end: 1, aboutTop: 1e9, contactTop: 1e9, contactH: 1 };
 const A = { hero: { x: 0, y: 0, w: 1, h: 1 }, stage: { x: 0, y: 0, w: 1, h: 1 }, contact: { x: 0, y: 0, w: 1, h: 1 }, card: { x: 0, y: 0, w: 328, h: 118 } };
 const inside = (node, box) => { const a = node.getBoundingClientRect(), b = box.getBoundingClientRect(); return { x: a.left - b.left, y: a.top - b.top, w: Math.max(1, a.width), h: Math.max(1, a.height) }; };
 let lastW = innerWidth;
@@ -785,8 +786,7 @@ function measure() {
   A.contact = inside(el.aContact, el.contact);
   const c = el.contact.getBoundingClientRect();
   M.contactTop = c.top + scrollY; M.contactH = Math.max(1, c.height);
-  const m = manifesto.getBoundingClientRect();
-  M.mfTop = m.top + scrollY; M.mfH = Math.max(1, m.height);
+  M.aboutTop = el.about.getBoundingClientRect().top + scrollY;
   layoutDemo();
   lastW = innerWidth;
   gl?.resize();
@@ -800,15 +800,21 @@ addEventListener("load", queueMeasure);
 new ResizeObserver(queueMeasure).observe($("main"));
 
 /* ---------- Um loop: lê o scroll, atualiza o que depende dele e desenha o 3D. Nada aqui move o documento. ---------- */
-const S = { y: 0, vh: 1, H: 0, Q: 0, C: 0, P: 0, t: 0 };
-const ui = { step: -1, f: [-1, -1, -1, -1, -1], p: -1, stuck: null, on: null, live: null, mode: -2 };
+const S = { y: 0, vh: 1, H: 0, Q: 0, C: 0, t: 0 };
+const ui = { step: -1, f: [-1, -1, -1, -1, -1], stuck: null, on: null, live: null, mode: -2, nightB: null, nightT: null };
+const themeMeta = $('meta[name="theme-color"]');
+const PAPER = getComputedStyle(root).getPropertyValue("--paper").trim() || "#f1f2f4";
 let last = 0, first = true, onContact = false;
 
 function updateDOM() {
   const stuck = S.y > 24;
   if (stuck !== ui.stuck) { ui.stuck = stuck; el.nav.classList.toggle("is-stuck", stuck); }
-  const p = reduce ? 1 : S.P;
-  if (Math.abs(p - ui.p) > .002) { ui.p = p; manifesto.style.setProperty("--p", p.toFixed(3)); }
+  // Cor atrás das barras do navegador no celular. O fundo da raiz acompanha a seção que está na borda de baixo da tela:
+  // preto no palco e no contato, claro no resto. O theme-color (barra de cima, em navegadores que o usam) acompanha a de cima.
+  const bot = S.y + S.vh, nightB = (bot > M.T + 1 && bot < M.aboutTop + 1) || bot > M.contactTop + 1;
+  if (nightB !== ui.nightB) { ui.nightB = nightB; root.style.backgroundColor = nightB ? "#000" : ""; }
+  const nightT = (S.y > M.T - 1 && S.y < M.aboutTop - 1) || S.y > M.contactTop - 1;
+  if (nightT !== ui.nightT) { ui.nightT = nightT; themeMeta.content = nightT ? "#000000" : PAPER; }
   if (!root.classList.contains("pin")) return;
   const Q = S.Q;
   let step = 0;
@@ -842,10 +848,9 @@ function frame(now) {
   const tH = clamp(y / M.T);
   const tQ = clamp((y - M.T) / M.unit, 0, QMAX);
   const tC = clamp((y + vh - M.contactTop) / Math.min(M.contactH, vh));
-  const tP = clamp((y + vh * .86 - M.mfTop) / (M.mfH + vh * .3));
   const k = first || reduce ? 1 : 1 - Math.exp(-dt * 9);
   first = false;
-  S.H += (tH - S.H) * k; S.Q += (tQ - S.Q) * k; S.C += (tC - S.C) * k; S.P += (tP - S.P) * k;
+  S.H += (tH - S.H) * k; S.Q += (tQ - S.Q) * k; S.C += (tC - S.C) * k;
   updateDOM();
   if (gl) {
     // O 3D é um só: mora na cena e muda para o cartão de contato quando nenhum dos dois está na tela.
@@ -1221,7 +1226,7 @@ async function initGL() {
   const cols = BRANDS.map(b => new THREE.Color(b.c));
   const glow = () => { const m = new THREE.Mesh(quad, new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); m.renderOrder = -1; m.visible = false; scene.add(m); return m; };
 
-  const slabs = [0, 1].map(i => {
+  const slabs = [0].map(i => {
     const g = new THREE.Group();
     const frame = new THREE.Mesh(frameGeo, frameMat);
     const glass = new THREE.Mesh(glassGeo, glassMat);
@@ -1339,7 +1344,6 @@ async function initGL() {
     let shade = 0, open = 0, lit = 0;
 
     if (onContact) {
-      slabs[1].g.visible = false; slabs[1].halo.visible = false;
       nb.g.visible = false; nb.halo.visible = false;
       setP(PT, wx(A.contact.x + A.contact.w / 2), wy(A.contact.y + A.contact.h / 2), 0, A.contact.h * upp / SH, .1, -.5 + Math.sin(t * .55) * .1 * idle, -.07);
       PT.y += Math.sin(t * .8) * .03 * PT.s * idle;
@@ -1355,12 +1359,12 @@ async function initGL() {
       setP(PS, wx(sx), wy(sy), 0, Math.min(A.stage.h * .8, A.stage.w * .8 / AR) * upp / SH, .06, -.34, .03);
       setP(PE, wx(sx), wy(sy), 0, Math.min(A.stage.h * .9 / 3.37, A.stage.w * .9 / 2.19) * upp, -1.05, 0, -1 + Math.sin(t * .35) * .05 * idle);
 
-      // Telas largas: o palco tem coluna própria e o aparelho viaja do herói até ela.
-      // Telas estreitas: o caminho cruzaria o texto, então o aparelho sai junto com o herói e um igual sobe com a folha.
-      const travel = A.stage.x > innerWidth * .3;
-      const gone = !travel && y >= Math.min(A.hero.y + A.hero.h * 1.5, M.T - 1);
-      const gate = travel ? smooth(.9, 1, S.H) : gone ? 1 : 0;
-      const m = travel ? easeIO(S.H) : gone ? 1 : 0, swing = Math.sin(Math.PI * m);
+      // O aparelho viaja do herói até o palco em qualquer largura. Em tela larga, da coluna do herói para a do palco.
+      // Em tela estreita ele é o último elemento do herói, logo acima da folha: o caminho é uma descida curta, sem cruzar texto.
+      const wide = A.stage.x > innerWidth * .3;                       // palco em duas colunas
+      const gate = smooth(.9, 1, S.H);
+      // Em tela estreita ele primeiro sobe junto com a página, até aparecer inteiro, e só então desce para o lugar no palco.
+      const m = wide ? easeIO(S.H) : easeIO(clamp((S.H - .25) / .75)), swing = Math.sin(Math.PI * m);
       lit = exOf(S.Q) * gate;
       open = Math.max(.2 * (1 - m) * I, lit);
 
@@ -1377,19 +1381,15 @@ async function initGL() {
       if (dock > 0) {
         setP(PD, wx(sx - A.stage.w * .31), wy(sy + A.stage.h * .2), .5 * PS.s, PS.s * .44, .05, .4, -.05);
         mixP(P0, P0, PD, dock);
-        if (travel) P0.y -= out * vh * .9 * upp; else P0.x -= out * innerWidth * .8 * upp;
+        if (wide) P0.y -= out * vh * .9 * upp; else P0.x -= out * innerWidth * .8 * upp;
         P0.z += out * 1.2;
       }
       setP(PT, P0.x, P0.y, P0.z, P0.s, P0.rx, P0.ry, P0.rz);
-      const fill0 = travel ? (S.H < .8 ? 1 - smooth(.38, .62, S.H) : layerOf(S.Q, 0)) : gone ? layerOf(S.Q, 0) : 1;
-      shade = (travel ? 1 - smooth(.1, .5, S.H) : gone ? 0 : 1) * I;
+      const fill0 = S.H < .8 ? 1 - smooth(.38, .62, S.H) : layerOf(S.Q, 0);
+      shade = (1 - smooth(.1, .5, S.H)) * I;
       lead.u.uBrand.value.lerp(cols[sel], kc);
       if (out >= .999) { lead.g.visible = false; lead.halo.visible = false; }
       else place(lead, PT, 0, fill0, fill0 * smooth(.8, 1, S.H) * .42 * (1 - out), dt, 1 - clamp(lit * 3));
-
-      // Telas estreitas: o aparelho igual, apagado, que sobe com a folha enquanto o do herói sai de cena.
-      const twin = slabs[1];
-      if (!travel && !gone) place(twin, PS, 0, 0, 0, dt); else { twin.g.visible = false; twin.halo.visible = false; }
 
       /* Notebook. A base fica parada, inclinada para a câmera; a tampa gira na dobradiça até abrir. Depois a câmera entra
          no monitor: a tela viaja até o retângulo do quadro em HTML, de frente e no plano z = 0, e as duas coincidem. */
@@ -1415,8 +1415,8 @@ async function initGL() {
         const fy = nb.hingeAt.y + by * ca - bz * sa, fz = nb.hingeAt.z + by * sa + bz * ca;                    // borda da frente da base
         const low = Math.max(toPx(nb.hingeAt.x - NBK.WL / 2, fy, fz)[1], toPx(nb.hingeAt.x + NBK.WL / 2, fy, fz)[1]);
         const left = toPx(-NBK.pcx - NBK.WL / 2, -NBK.pcy, 0)[0];
-        const born = smooth(.06, .4, nbIn), body = born * (1 - smooth(.45, .72, Z)) * (travel ? smooth(0, 90, left) : 1);
-        const baseA = body * (travel ? 1 : smooth(0, 60, M.T + A.stage.y + A.stage.h + 6 - low));
+        const born = smooth(.06, .4, nbIn), body = born * (1 - smooth(.45, .72, Z)) * (wide ? smooth(0, 90, left) : 1);
+        const baseA = body * (wide ? 1 : smooth(0, 60, M.T + A.stage.y + A.stage.h + 6 - low));
         for (const o of nb.lidParts) o.visible = body > .004;
         nb.hinge.visible = baseA > .004;
         nb.metal.opacity = nb.glass.opacity = nb.um.uAlpha.value = body;
