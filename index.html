@@ -99,7 +99,7 @@ button{font:inherit;color:inherit}
 /* Bloco visual: a âncora é só uma caixa de layout; o canvas lê a posição dela e desenha o aparelho ali. */
 .visual{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;column-gap:16px;height:min(36vh,310px);height:min(36svh,310px)}
 .anchor{height:100%;aspect-ratio:47/100;pointer-events:none}
-.hero__visual .anchor{grid-column:2}                   /* o celular fica à direita, do tamanho da faixa */
+.hero__visual{grid-template-columns:minmax(0,1fr);justify-items:center;height:min(30vh,250px);height:min(30svh,250px)}   /* no celular: aparelho centralizado, sem coluna vazia ao lado */
 .fallback{display:none;width:100%;height:100%;padding:5%;border-radius:15% / 7%;background:#17191d;transform:rotate(6deg)}
 .fallback::before{content:"";display:block;width:100%;height:100%;border-radius:12% / 5.6%;background:var(--accent)}
 .no-gl .fallback{display:block}
@@ -310,7 +310,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 
   .visual{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;row-gap:24px;justify-items:center;align-self:center;height:auto}
   .visual .anchor{order:-1;height:min(60vh,620px);height:min(60svh,620px)}
-  .hero__visual .anchor{grid-column:auto}
+  .hero__visual{height:auto}
   .visual .brandbox{justify-items:center;text-align:center}
 
   .hero__in{grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto minmax(0,1fr) auto;column-gap:24px;row-gap:28px;min-height:calc(100vh - 30px);min-height:calc(100svh - 30px);padding-top:108px;padding-bottom:calc(var(--radius) + 44px)}
