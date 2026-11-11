@@ -62,7 +62,7 @@ button{font:inherit;color:inherit}
 .nav__mark,.nav__links{position:relative;pointer-events:auto;transition:transform .6s var(--ease);will-change:transform}
 .nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none}
 .nav__mark{font-size:1.125rem;font-weight:750;letter-spacing:-.03em}
-.nav__links{display:flex;gap:2px;margin-right:-14px;font-size:.9375rem;font-weight:550}
+.nav__links{display:flex;align-items:center;gap:2px;margin-right:-14px;font-size:.9375rem;font-weight:550}
 .nav__links a{position:relative;padding:0 14px;border-radius:999px;transition:color .3s}
 .nav__links a:not(:last-child){display:none}
 @media (min-width:720px){.nav__links a:not(:last-child){display:inline-flex}}
@@ -81,24 +81,25 @@ button{font:inherit;color:inherit}
 .btn:active{transform:scale(.97)}
 @media (hover:hover){.btn:hover{box-shadow:inset 0 0 0 1px var(--ink)}}
 .brandbox{display:grid;row-gap:10px;justify-items:start;align-self:end}
-.brand{position:relative;display:grid;place-items:center;width:52px;height:52px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 22%,transparent);transition:box-shadow .2s}
-.brand__i{width:30px;height:30px;overflow:visible}
+.brand{position:relative;display:grid;place-items:center;width:44px;height:44px;margin-right:4px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;transition:box-shadow .2s}
+.brand__i{width:24px;height:24px;overflow:visible}
 .brand__orbit{transform-origin:16px 16px;animation:orbit 9s linear infinite}
 .brand__i circle{mix-blend-mode:multiply;transition:fill .4s}
 .brand__a{fill:var(--accent)}
 .brand__b{fill:color-mix(in srgb,var(--accent),#3b6cff 70%)}
 .brand__c{fill:color-mix(in srgb,var(--accent),#ffcc33 70%)}
-.sheet--dark .brand__i circle,.contact .brand__i circle{mix-blend-mode:screen}
+.nav.is-stuck .brand__i circle,html:not(.js) .brand__i circle{mix-blend-mode:screen}
 .brand.is-spin .brand__i{animation:spin .6s var(--ease)}
 @keyframes orbit{to{transform:rotate(360deg)}}
 @keyframes spin{from{transform:rotate(-180deg) scale(.8)}to{transform:none}}
 .brand:active{transform:scale(.97)}
 .brand:active .i{transform:rotate(180deg)}
-@media (hover:hover){.brand:hover{box-shadow:inset 0 0 0 1px var(--ink)}}
+@media (hover:hover){.brand:hover{box-shadow:inset 0 0 0 1px currentColor}}
 
 /* Bloco visual: a âncora é só uma caixa de layout; o canvas lê a posição dela e desenha o aparelho ali. */
 .visual{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;column-gap:16px;height:min(36vh,310px);height:min(36svh,310px)}
 .anchor{height:100%;aspect-ratio:47/100;pointer-events:none}
+.hero__visual .anchor{grid-column:2}                   /* o celular fica à direita, do tamanho da faixa */
 .fallback{display:none;width:100%;height:100%;padding:5%;border-radius:15% / 7%;background:#17191d;transform:rotate(6deg)}
 .fallback::before{content:"";display:block;width:100%;height:100%;border-radius:12% / 5.6%;background:var(--accent)}
 .no-gl .fallback{display:block}
@@ -309,6 +310,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 
   .visual{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;row-gap:24px;justify-items:center;align-self:center;height:auto}
   .visual .anchor{order:-1;height:min(60vh,620px);height:min(60svh,620px)}
+  .hero__visual .anchor{grid-column:auto}
   .visual .brandbox{justify-items:center;text-align:center}
 
   .hero__in{grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto minmax(0,1fr) auto;column-gap:24px;row-gap:28px;min-height:calc(100vh - 30px);min-height:calc(100svh - 30px);padding-top:108px;padding-bottom:calc(var(--radius) + 44px)}
@@ -369,6 +371,10 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
   <div class="nav__bar">
     <a class="nav__mark" href="#topo" aria-label="nicomsz, voltar ao topo">nicomsz</a>
     <nav class="nav__links" aria-label="Seções">
+      <button class="brand" type="button" data-brand>
+        <svg class="brand__i" viewBox="0 0 32 32" aria-hidden="true"><g class="brand__orbit"><circle class="brand__a" cx="16" cy="8.5" r="6"/><circle class="brand__b" cx="22.5" cy="20" r="6"/><circle class="brand__c" cx="9.5" cy="20" r="6"/></g></svg>
+        <span class="sr" data-brand-name>Brasa</span>
+      </button>
       <a href="#stack">Stack</a>
       <a href="#trajetoria">Trajetória</a>
       <a href="#contato">Contato</a>
@@ -387,12 +393,6 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
         <p class="who"><span><strong>Nicolas Moraes de Souza</strong>, desenvolvedor</span></p>
 
         <div class="visual hero__visual">
-          <div class="brandbox">
-            <button class="brand" type="button" data-brand>
-              <svg class="brand__i" viewBox="0 0 32 32" aria-hidden="true"><g class="brand__orbit"><circle class="brand__a" cx="16" cy="8.5" r="6"/><circle class="brand__b" cx="22.5" cy="20" r="6"/><circle class="brand__c" cx="9.5" cy="20" r="6"/></g></svg>
-              <span class="sr" data-brand-name>Brasa</span>
-            </button>
-          </div>
           <div class="anchor" data-anchor="hero"><div class="fallback" aria-hidden="true"></div></div>
         </div>
 
@@ -550,12 +550,6 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
   <section class="sheet sheet--dark contact" id="contato" aria-labelledby="contato-t">
     <div class="in contact__in">
       <div class="visual contact__visual">
-        <div class="brandbox">
-          <button class="brand" type="button" data-brand>
-            <svg class="brand__i" viewBox="0 0 32 32" aria-hidden="true"><g class="brand__orbit"><circle class="brand__a" cx="16" cy="8.5" r="6"/><circle class="brand__b" cx="22.5" cy="20" r="6"/><circle class="brand__c" cx="9.5" cy="20" r="6"/></g></svg>
-            <span class="sr" data-brand-name>Brasa</span>
-          </button>
-        </div>
         <div class="anchor" data-anchor="contact"></div>
       </div>
 
