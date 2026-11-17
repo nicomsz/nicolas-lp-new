@@ -6,6 +6,13 @@
 <meta name="theme-color" content="#f1f2f4">
 <title>Portfólio Nicolas Moraes</title>
 <meta name="description" content="Nicolas Moraes de Souza desenvolve experiências digitais de ponta a ponta: web e mobile, da interface à arquitetura e infraestrutura, com inteligência artificial.">
+<meta property="og:title" content="Nicolas Moraes · Software Engineer">
+<meta property="og:description" content="Apps iOS e Android, web e back-end. Projetos em React Native, React, TypeScript, Node.js e Laravel.">
+<meta property="og:image" content="https://nicomsz.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:url" content="https://nicomsz.com">
+<meta property="og:type" content="website">
 <script>document.documentElement.classList.add("js","pin")</script>
 <style>
 /* Mona Sans, a tipografia da GitHub. Copyright 2022 The Mona Sans Project Authors (https://github.com/github/mona-sans).
@@ -66,7 +73,7 @@ button{font:inherit;color:inherit}
 .nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none}
 .nav__mark{font-size:1.125rem;font-weight:750;letter-spacing:-.03em}
 .nav__links{display:flex;align-items:center;gap:2px;margin-right:-14px;font-size:.9375rem;font-weight:550}
-.nav__links a{position:relative;padding:0 14px;border-radius:999px;transition:color .3s}
+.nav__links a{position:relative;padding:0 14px;border-radius:999px;transition:color .3s,opacity .2s}
 .nav__links a:not(:last-child){display:none}
 @media (min-width:720px){.nav__links a:not(:last-child){display:inline-flex}}
 .nav__links a:last-child::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--accent);opacity:0;transition:opacity .3s}
@@ -76,7 +83,7 @@ button{font:inherit;color:inherit}
 .nav.is-stuck .nav__links,html:not(.js) .nav__links{transform:translate3d(calc((var(--shift) + 20px) * -1),0,0)}
 .nav.is-stuck .nav__links a:last-child,html:not(.js) .nav__links a:last-child{color:var(--on-accent)}
 .nav.is-stuck .nav__links a:last-child::before,html:not(.js) .nav__links a:last-child::before{opacity:1}
-@media (hover:hover){.nav__links a:not(:last-child):hover{text-decoration:underline;text-underline-offset:.3em}}
+@media (hover:hover){.nav__links a:not(:last-child):hover{opacity:.62}}                 /* sem linha nem borda no hover: o link só esmaece */
 
 /* Controles */
 .btn{display:inline-flex;align-items:center;min-height:48px;padding:0 1.25em;border-radius:999px;font-size:1rem;font-weight:600;white-space:nowrap;text-decoration:none;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 26%,transparent);transition:box-shadow .25s,transform .25s var(--ease)}
@@ -84,7 +91,7 @@ button{font:inherit;color:inherit}
 .btn:active{transform:scale(.97)}
 @media (hover:hover){.btn:hover{box-shadow:inset 0 0 0 1px var(--ink)}}
 .brandbox{display:grid;row-gap:10px;justify-items:start;align-self:end}
-.brand{position:relative;display:grid;place-items:center;width:44px;height:44px;margin-right:4px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;transition:box-shadow .2s}
+.brand{position:relative;display:grid;place-items:center;width:44px;height:44px;margin-right:4px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer}
 .brand__spin{display:grid}
 /* O giro lento é do <svg> inteiro, não de um grupo dentro dele: assim a animação roda no compositor.
    (Girar um elemento de dentro do SVG refazia o layout a cada frame.) */
@@ -97,7 +104,6 @@ button{font:inherit;color:inherit}
 @keyframes orbit{to{transform:rotate(360deg)}}
 .brand:active{transform:scale(.97)}
 .brand:active .i{transform:rotate(180deg)}
-@media (hover:hover){.brand:hover{box-shadow:inset 0 0 0 1px currentColor}}
 
 /* Bloco visual: a âncora é só uma caixa de layout; o canvas lê a posição dela e desenha o aparelho ali. */
 .visual{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;column-gap:16px;height:min(36vh,310px);height:min(36svh,310px)}
@@ -107,8 +113,9 @@ button{font:inherit;color:inherit}
    Em tela larga ele volta para a coluna da direita (regras lá embaixo). */
 .hero__visual{order:4;grid-template-columns:minmax(0,1fr);justify-items:center;height:min(50vh,410px);height:min(50svh,410px);margin:12px 0 calc(min(50vh,410px) * -.62);margin-bottom:calc(min(50svh,410px) * -.62)}
 .no-gl .hero__visual{margin-bottom:0}
-.fallback{display:none;width:100%;height:100%;padding:5%;border-radius:15% / 7%;background:#17191d;transform:rotate(6deg)}
+.fallback{position:relative;display:none;width:100%;height:100%;padding:5%;border-radius:15% / 7%;background:#17191d;transform:rotate(6deg)}
 .fallback::before{content:"";display:block;width:100%;height:100%;border-radius:12% / 5.6%;background:var(--accent)}
+.fallback::after{content:"";position:absolute;left:36.5%;top:3.7%;width:27%;height:3.7%;border-radius:999px;background:#050506}
 .no-gl .fallback{display:block}
 
 /* Cena. O herói rola normalmente; a folha escura do palco é sticky dentro de uma trilha longa.
@@ -271,7 +278,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 .about__more{max-width:36em;font-size:clamp(1.0625rem,1.3vw,1.25rem);line-height:1.5;color:var(--mute);text-wrap:pretty}
 .trail{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:20px;border-bottom:1px solid var(--line)}
 .trail li{display:grid;grid-template-columns:subgrid;grid-column:1/-1;row-gap:2px;align-items:start;padding:16px 0;border-top:1px solid var(--line)}
-.trail__when{grid-row:1/4;padding-top:.55em;white-space:nowrap}
+.trail__when{grid-row:1/4;width:min-content;padding-top:.55em}
 .trail__where{grid-column:2;font-size:1.5rem;font-weight:750;line-height:1.15;letter-spacing:-.03em;white-space:nowrap}
 .trail__what{grid-column:2;font-weight:560}
 .trail__how{grid-column:2;font-size:.9375rem;color:var(--mute)}
@@ -345,7 +352,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 
   .trail{grid-template-columns:10rem minmax(9rem,.9fr) minmax(12rem,1.1fr) minmax(0,1.8fr);column-gap:24px}
   .trail li{align-items:baseline;padding:22px 0}
-  .trail__when{grid-row:auto;padding-top:0}
+  .trail__when{grid-row:auto;width:auto;padding-top:0;white-space:nowrap}
   .trail__where,.trail__what,.trail__how{grid-column:auto}
   .trail__where{font-size:2rem}
   .tools{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -532,12 +539,12 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
       <div class="block" id="trajetoria">
         <h2 class="h2">Trajetória</h2>
         <ol class="trail">
-          <li><span class="trail__when label">2026 – hoje</span><strong class="trail__where">Klubs</strong><span class="trail__what">Desenvolvedor mobile</span><span class="trail__how">React Native e Expo, 15+ apps white-label em produção</span></li>
-          <li><span class="trail__when label">2025 – 26</span><strong class="trail__where">Stealth</strong><span class="trail__what">Desenvolvedor full stack</span><span class="trail__how"></span></li>
-          <li><span class="trail__when label">2025</span><strong class="trail__where">DOOOR</strong><span class="trail__what">Líder de front-end</span><span class="trail__how"></span></li>
-          <li><span class="trail__when label">2023 – 25</span><strong class="trail__where">Scalable</strong><span class="trail__what">Desenvolvedor back-end</span><span class="trail__how">Fintech de crédito e pagamentos, com NestJS e Stripe</span></li>
-          <li><span class="trail__when label">2023 – 24</span><strong class="trail__where">Blocklize</strong><span class="trail__what">Desenvolvedor front-end</span><span class="trail__how">Web3</span></li>
-          <li><span class="trail__when label">até 2029</span><strong class="trail__where">UniSociesc</strong><span class="trail__what">Ciência da Computação</span><span class="trail__how">Bacharelado em andamento</span></li>
+          <li><span class="trail__when label">fev&nbsp;2026&nbsp;– hoje</span><strong class="trail__where">Klubs</strong><span class="trail__what">Desenvolvedor mobile</span><span class="trail__how">15+ apps white-label para iOS e Android, em React Native (Expo) e TypeScript. Publico nas lojas e cuido de CI/CD e das atualizações OTA.</span></li>
+          <li><span class="trail__when label">set&nbsp;2025&nbsp;– jan&nbsp;2026</span><strong class="trail__where">Stealth</strong><span class="trail__what">Desenvolvedor full stack</span><span class="trail__how">Produto com mais de 2.000 usuários ativos por dia. Front-end em Next.js e React, APIs e serviços em Node.js e Python.</span></li>
+          <li><span class="trail__when label">fev&nbsp;2025&nbsp;– set&nbsp;2025</span><strong class="trail__where">DOOOR</strong><span class="trail__what">Desenvolvedor full stack</span><span class="trail__how">Liderança do front-end em um time de 3 desenvolvedores, com React e Next.js. Produtos Web3 com conexão de carteira e contratos inteligentes.</span></li>
+          <li><span class="trail__when label">out&nbsp;2023&nbsp;– fev&nbsp;2025</span><strong class="trail__where">Scalable</strong><span class="trail__what">Desenvolvedor full stack</span><span class="trail__how">Plataforma financeira de crédito e pagamentos. A maior parte do trabalho no back-end, com NestJS, TypeScript e Prisma.</span></li>
+          <li><span class="trail__when label">mai&nbsp;2023&nbsp;– fev&nbsp;2024</span><strong class="trail__where">Blocklize</strong><span class="trail__what">Desenvolvedor front-end Web3</span><span class="trail__how">Plataforma de investimentos Web3 em Next.js e SCSS: visualização de portfólio e transações com ativos ERC-20 e ERC-721.</span></li>
+          <li><span class="trail__when label">até&nbsp;2029</span><strong class="trail__where">UniSociesc</strong><span class="trail__what">Ciência da Computação</span><span class="trail__how">Bacharelado em andamento</span></li>
         </ol>
       </div>
 
@@ -1230,7 +1237,7 @@ async function initGL() {
   const FS = `
     uniform sampler2D tArt; uniform sampler2D tWire;
     uniform vec3 uBrand; uniform vec3 uInk; uniform vec3 uSoft; uniform vec3 uPlate; uniform vec3 uWireBg; uniform vec3 uWireLine;
-    uniform float uFill; uniform float uMode; uniform float uWire; uniform float uLabel; uniform float uAlpha; uniform float uGloss;
+    uniform float uFill; uniform float uMode; uniform float uWire; uniform float uLabel; uniform float uAlpha; uniform float uGloss; uniform float uIsle;
     varying vec2 vUv; varying vec3 vN; varying vec3 vV;
     // Quatro amostras em grade rotacionada dentro do pixel, cada uma um nível de mip mais nítida que a amostra comum.
     // A leitura comum mistura o mip de baixo e amolece a arte; esta mantém a borda firme sem cintilar.
@@ -1259,6 +1266,17 @@ async function initGL() {
       vec3 col = mix(dim, lit, 1.0 - smoothstep(edge - 0.035, edge + 0.035, vUv.y));
       float scan = (1.0 - smoothstep(0.0, 0.014, abs(vUv.y - edge))) * smoothstep(0.0, 0.05, uFill) * (1.0 - smoothstep(0.95, 1.0, uFill));
       col += scan * 0.9;
+      // Ilha no topo da tela. É peça do aparelho, não do app: fica igual com a tela acesa ou em traço, por baixo do
+      // reflexo do vidro. Medidas nas unidades da tela (360 × 800): 108 × 31, a 11 do topo.
+      if (uIsle > 0.5) {
+        vec2 q = vec2((vUv.x - 0.5) * 360.0, (vUv.y - 0.966875) * 800.0);
+        float d = length(vec2(max(abs(q.x) - 38.5, 0.0), q.y)) - 15.5;
+        float aa = fwidth(d) * 0.75 + 0.0001;
+        col = mix(col, vec3(0.002), 1.0 - smoothstep(-aa, aa, d));
+        // Com a tela em traço a ilha sumiria no fundo escuro: ali ela ganha um contorno fino, da cor do traço.
+        float ring = 1.0 - smoothstep(1.3 - aa, 1.3 + aa, abs(d + 1.3));
+        col = mix(col, mix(uWireBg, uWireLine, 0.6), ring * smoothstep(edge - 0.035, edge + 0.035, vUv.y));
+      }
       vec3 n = normalize(vN); vec3 v = normalize(vV);
       float toKey = dot(reflect(-v, n), normalize(vec3(-0.35, 0.75, 0.56)));
       // Reflexo do vidro: um brilho estreito que passa pela tela. Largo e forte, ele cobria a tela inteira de cinza
@@ -1274,7 +1292,7 @@ async function initGL() {
     tWire: { value: wireTex }, uInk: { value: new THREE.Color("#0c0d10") }, uSoft: { value: new THREE.Color("#4a505c") },
     uPlate: { value: new THREE.Color("#15171c") }, uWireBg: { value: new THREE.Color("#131519") }, uWireLine: { value: new THREE.Color("#7d8491") }
   };
-  const display = (art, mode) => new THREE.ShaderMaterial({ uniforms: { ...shared, tArt: { value: art }, uBrand: { value: new THREE.Color(BRANDS[0].c) }, uFill: { value: mode ? 0 : 1 }, uMode: { value: mode }, uWire: { value: 0 }, uLabel: { value: 0 }, uAlpha: { value: 1 }, uGloss: { value: 1 } }, vertexShader: VS, fragmentShader: FS });
+  const display = (art, mode) => new THREE.ShaderMaterial({ uniforms: { ...shared, tArt: { value: art }, uBrand: { value: new THREE.Color(BRANDS[0].c) }, uFill: { value: mode ? 0 : 1 }, uMode: { value: mode }, uWire: { value: 0 }, uLabel: { value: 0 }, uAlpha: { value: 1 }, uGloss: { value: 1 }, uIsle: { value: 0 } }, vertexShader: VS, fragmentShader: FS });
   const frameMat = new THREE.MeshMatcapMaterial({ matcap: metalCap });     // moldura de titânio
   const glassMat = new THREE.MeshMatcapMaterial({ matcap: glassCap });     // vidro preto e borda das placas
   const cols = BRANDS.map(b => new THREE.Color(b.c));
@@ -1286,6 +1304,7 @@ async function initGL() {
     const glass = new THREE.Mesh(glassGeo, glassMat);
     glass.position.z = zFront + .002;
     const screen = new THREE.Mesh(screenGeo, display(uiTex, 0));
+    screen.material.uniforms.uIsle.value = 1;                         // só a tela do aparelho tem a ilha
     screen.position.z = zFront + .004;
     screen.userData.i = i;
     g.add(frame, glass, screen);
