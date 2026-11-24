@@ -277,18 +277,19 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
     <div class="wrap talk">
       <div class="sec-head">
         <h2>Você anota uma vez. O lembrete sai na data certa.</h2>
-        <p>Sem robô conversando no seu lugar: o Volta só envia o aviso. Quem responde o tutor é a sua equipe, no mesmo WhatsApp de sempre.</p>
+        <p>Para anotar, você manda uma mensagem para o número do Volta, do jeito que escreveria para alguém, ou a foto da carteirinha. Não tem sistema para abrir. Depois, o Volta só envia o aviso: quem responde o tutor é a sua equipe, no mesmo WhatsApp de sempre.</p>
       </div>
       <ol class="thread">
         <li class="beat">
           <span class="n">1</span>
-          <h3>Você anota a vacina</h3>
-          <div class="bub note pop">Thor, da Marina. Vacina V10, aplicada hoje.</div>
+          <h3>Você anota pelo WhatsApp</h3>
+          <div class="bub out pop">Thor, da Marina, (47) 99999-1234. V10 aplicada hoje.</div>
+          <div class="bub note pop" style="--d:700ms">Anotado. A Marina recebe o lembrete em <span data-due="358" data-ano></span>, 7 dias antes de vencer.</div>
         </li>
         <li class="beat">
           <span class="n">2</span>
           <h3>Sete dias antes de vencer, o Volta avisa</h3>
-          <div class="bub out pop">Oi Marina, aqui é da Clínica Bicho Bom. A vacina V10 do Thor vence em <span data-due="7">16/11</span>. Quer agendar? É só responder esta mensagem.</div>
+          <div class="bub out pop">Oi Marina, aqui é da Clínica Bicho Bom. A vacina V10 do Thor vence em <span data-due="365">16/11</span>. Quer agendar? É só responder esta mensagem.</div>
         </li>
         <li class="beat">
           <span class="n">3</span>
@@ -311,7 +312,7 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
     <div class="wrap">
       <div class="sec-head">
         <h2>Na clínica, uma lista só.</h2>
-        <p>Quem vai receber o lembrete, quem respondeu e quem já marcou. Toque nos filtros para ver a lista mudar.</p>
+        <p>Tudo o que você anota pelo WhatsApp vira esta lista: quem vai receber o lembrete, quem respondeu e quem já marcou. Toque nos filtros para ver a lista mudar.</p>
       </div>
 
       <div class="board">
@@ -367,6 +368,10 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
         <h2>Dúvidas comuns</h2>
       </div>
       <div>
+        <details>
+          <summary>Como eu anoto as vacinas?</summary>
+          <p>Mandando uma mensagem para o número do Volta no WhatsApp, com o nome do pet, o do tutor, o telefone e a vacina, ou uma foto da carteirinha. O Volta responde com o que entendeu e a data do lembrete, para você conferir.</p>
+        </details>
         <details>
           <summary>Preciso trocar o número da clínica?</summary>
           <p>Não. O lembrete sai do número que a clínica já usa, e você continua atendendo nele pelo celular.</p>
@@ -428,7 +433,7 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
   // datas relativas a hoje: a vacina do exemplo vence daqui a 7 dias, que é quando o primeiro lembrete sai
   all('[data-due]').forEach(function(e){
     var d=new Date(hoje+Number(e.getAttribute('data-due'))*DIA);
-    e.textContent=p2(d.getUTCDate())+'/'+p2(d.getUTCMonth()+1);
+    e.textContent=p2(d.getUTCDate())+'/'+p2(d.getUTCMonth()+1)+(e.hasAttribute('data-ano')?'/'+d.getUTCFullYear():'');
   });
 
   // filtros do painel
