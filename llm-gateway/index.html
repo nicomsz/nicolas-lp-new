@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>System design com um gateway de LLM</title>
 <meta name="description" content="Os conceitos de system design que aparecem quando um produto usa LLM em produção, explicados com o código e os números de um gateway de LLM open source.">
+<link rel="alternate" hreflang="pt-BR" href="https://nicomsz.com/llm-gateway/">
+<link rel="alternate" hreflang="en" href="https://nicomsz.com/llm-gateway/en/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&amp;display=swap" rel="stylesheet">
@@ -264,6 +266,20 @@ dl.what dd:last-child { margin-bottom: 0; }
 .qa details p { padding: 0 0 14px 27px; font-size: 15.5px; }
 .view > header .lede a { color: inherit; }
 
+
+/* seletor de idioma: dois botões pequenos no estilo clássico; o idioma atual fica "pressionado" */
+.lang { display: flex; flex: none; }
+.lang a {
+  display: grid; place-items: center; min-width: 30px; height: 22px; padding: 0 6px;
+  font: 600 11px/1 var(--font-sans); letter-spacing: 0.02em; color: var(--ink); text-decoration: none;
+  background: var(--face); border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi);
+  box-shadow: inset -1px -1px 0 var(--shadow); -webkit-tap-highlight-color: transparent;
+}
+.lang a + a { margin-left: -1px; }
+.lang a[aria-current="true"] { background: var(--hi); border-color: var(--dark) var(--hi) var(--hi) var(--dark); box-shadow: inset 1px 1px 0 var(--shadow); }
+@media (max-width: 760px) { .bar { column-gap: 10px; } .brand { font-size: 14px; } .lang a { min-width: 32px; height: 30px; font-size: 12px; } .loadbar i { width: 7px; } }
+@media (max-width: 380px) { .loadbar i { width: 5px; } .brand { font-size: 13px; } }
+
 @media (max-width: 760px) {
   .bar { flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px 14px; }
   .brand { margin-right: auto; }
@@ -302,6 +318,7 @@ dl.what dd:last-child { margin-bottom: 0; }
 <header class="bar">
   <a class="brand" href="#visao-geral" data-nav="visao-geral">System design com LLM</a>
   <nav class="route" aria-label="Lições"><a href="#licao-1" data-nav="licao-1" title="Proxy reverso" aria-label="Lição 1: Proxy reverso"><span class="dot">1</span></a><a href="#licao-2" data-nav="licao-2" title="Streaming" aria-label="Lição 2: Streaming"><span class="dot">2</span></a><a href="#licao-3" data-nav="licao-3" title="Rate limit por tokens" aria-label="Lição 3: Rate limit por tokens"><span class="dot">3</span></a><a href="#licao-4" data-nav="licao-4" title="Balanceamento de carga" aria-label="Lição 4: Balanceamento de carga"><span class="dot">4</span></a><a href="#licao-5" data-nav="licao-5" title="Failover, retry e backoff" aria-label="Lição 5: Failover, retry e backoff"><span class="dot">5</span></a><a href="#licao-6" data-nav="licao-6" title="Circuit breaker" aria-label="Lição 6: Circuit breaker"><span class="dot">6</span></a><a href="#licao-7" data-nav="licao-7" title="Fila e load shedding" aria-label="Lição 7: Fila e load shedding"><span class="dot">7</span></a><a href="#licao-8" data-nav="licao-8" title="Cache de respostas" aria-label="Lição 8: Cache de respostas"><span class="dot">8</span></a><a href="#licao-9" data-nav="licao-9" title="Métricas e teste de carga" aria-label="Lição 9: Métricas e teste de carga"><span class="dot">9</span></a><a href="#entrevista" data-nav="entrevista" title="Perguntas de entrevista" aria-label="Perguntas de entrevista"><span class="dot">?</span></a></nav>
+  <nav class="lang" aria-label="Idioma"><a href="./" lang="pt-BR" aria-current="true">PT</a><a href="en/" lang="en" hreflang="en">EN</a></nav>
   <div class="loadbar" id="loadbar" role="progressbar" aria-label="Lições lidas" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" title="0 de 9 lições lidas"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 </header>
 
@@ -1327,6 +1344,12 @@ if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) 
     if (cur) skip[cur] = true;
     boxes.forEach(function (b) { b.checked = false; });
     refresh();
+  });
+
+
+  // ao trocar de idioma, continua na mesma lição
+  Array.prototype.forEach.call(document.querySelectorAll('.lang a'), function (a) {
+    a.addEventListener('click', function () { a.href = a.getAttribute('href').split('#')[0] + location.hash; });
   });
 
   refresh(); route(true);

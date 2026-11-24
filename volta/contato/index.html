@@ -89,6 +89,11 @@ input[aria-invalid="true"]{border-color:var(--red)}
 
 .legal{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;padding-block:24px 28px;font-size:.88rem;color:var(--ink-3)}
 .legal a{text-underline-offset:3px}
+
+/* seletor de idioma */
+.lang{display:flex;align-items:center;gap:2px;padding:3px;margin-right:2px;border-radius:999px;background:var(--paper)}
+.lang a{display:grid;place-items:center;min-width:34px;height:32px;padding:0 8px;border-radius:999px;font-size:.8rem;font-weight:600;letter-spacing:.02em;color:var(--ink-3);text-decoration:none}
+.lang a[aria-current="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(13,43,42,.18)}
 </style>
 </head>
 <body>
@@ -103,6 +108,7 @@ input[aria-invalid="true"]{border-color:var(--red)}
 <header class="nav">
   <div class="nav-pill">
     <a class="brand" href="../" aria-label="Volta, voltar para a página inicial"><svg aria-hidden="true"><use href="#mark"/></svg>Volta</a>
+    <nav class="lang" aria-label="Idioma"><a href="./" lang="pt-BR" aria-current="true">PT</a><a href="../en/contato/" lang="en" hreflang="en">EN</a></nav>
     <a class="back" href="../">Voltar para a página</a>
   </div>
 </header>

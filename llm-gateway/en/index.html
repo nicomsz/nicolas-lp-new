@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System design with an LLM gateway</title>
+<meta name="description" content="The system design concepts that show up when a product runs LLMs in production, explained with the code and the numbers of an open source LLM gateway.">
+<link rel="alternate" hreflang="pt-BR" href="https://nicomsz.com/llm-gateway/">
+<link rel="alternate" hreflang="en" href="https://nicomsz.com/llm-gateway/en/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&amp;display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: uma barra no topo traz a rota das 9 etapas; abaixo, uma etapa por vez, com o rótulo da seção
+     à esquerda e o conteúdo à direita. Tema único, claro: página branca, e o cinza clássico do Windows
+     na barra e nos controles, com o relevo de 1px (luz em cima e à esquerda, sombra embaixo e à direita). */
+  color-scheme: light;
+  --bg: #ffffff;
+  --face: #d4d0c8;      /* cinza clássico: barra, botões, teclas */
+  --surface: #eceae4;   /* cinza claro: blocos de código */
+  --hi: #ffffff;        /* luz do relevo */
+  --shadow: #808080;    /* sombra do relevo */
+  --dark: #404040;      /* sombra externa do relevo */
+  --ink: #111111;
+  --muted: #5f5e58;
+  --line: #dcd9d0;
+  --line-strong: #aca899;
+  --accent: #0a246a;    /* azul de seleção */
+  --on-ink: #ffffff;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 16px; line-height: 1.65;
+  -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+p, h1, h2, figure { margin: 0; }
+code, pre, kbd { font-family: var(--font-mono); }
+code { font-size: 0.86em; background: var(--surface); padding: 1.5px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+
+/* barra do topo: a rota das etapas, em cinza clássico com relevo */
+.bar {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 28px;
+  min-height: 52px; padding: 0 24px; background: var(--face);
+  border-bottom: 1px solid var(--shadow); box-shadow: inset 0 1px 0 var(--hi);
+}
+.brand { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; }
+.route { display: flex; align-items: center; flex: 1; max-width: 460px; margin: 0 auto; }
+.route a { display: flex; align-items: center; flex: 1; text-decoration: none; }
+.route a:last-child { flex: none; }
+.route a::after { content: ""; flex: 1; height: 2px; margin: 0 4px; background: linear-gradient(var(--shadow) 50%, var(--hi) 50%); }
+.route a:last-child::after { display: none; }
+.route a[data-s="done"]::after { background: linear-gradient(var(--ink) 50%, var(--hi) 50%); }
+/* não iniciada: botão em relevo. em andamento: retângulo pontilhado. concluída: campo branco com visto. atual: azul de seleção */
+.dot {
+  width: 24px; height: 24px; flex: none; display: grid; place-items: center;
+  background: var(--face); color: var(--dark);
+  border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi); box-shadow: inset -1px -1px 0 var(--shadow);
+  font-size: 12px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) { .route a:hover .dot { color: var(--ink); } }
+.route a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.route a[data-s="partial"] .dot { color: var(--ink); outline: 1px dotted var(--ink); outline-offset: -5px; }
+.route a[data-s="done"] .dot {
+  background: var(--hi); color: var(--ink); font-weight: 700;
+  border-color: var(--shadow) var(--hi) var(--hi) var(--shadow); box-shadow: inset 1px 1px 0 var(--dark);
+}
+.route a[aria-current="page"] .dot {
+  background: var(--accent); color: #ffffff; outline-color: #ffffff;
+  border-color: var(--dark) var(--hi) var(--hi) var(--dark); box-shadow: inset 1px 1px 0 #000000;
+}
+/* barra de carregamento clássica: campo afundado com 9 blocos em pé, um por etapa concluída */
+.loadbar {
+  display: flex; gap: 2px; flex: none; height: 22px; padding: 3px; background: var(--hi);
+  border: 1px solid; border-color: var(--shadow) var(--hi) var(--hi) var(--shadow); box-shadow: inset 1px 1px 0 var(--dark);
+}
+.loadbar i { width: 9px; height: 100%; background: var(--surface); }
+.loadbar i.on { background: var(--accent); }
+ol.index .s.none { visibility: hidden; }
+
+/* uma etapa por vez */
+main { padding: 80px 24px 96px; }
+.view { max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+.view > header { display: flex; flex-direction: column; gap: 20px; padding-bottom: 12px; }
+h1 {
+  font-size: clamp(40px, 7.4vw, 78px); font-weight: 600; font-stretch: 78%;
+  letter-spacing: -0.035em; line-height: 0.98; text-wrap: balance;
+}
+.lede { font-size: clamp(18px, 2.1vw, 21px); line-height: 1.5; color: var(--muted); max-width: 54ch; text-wrap: pretty; }
+.eyebrow { order: 3; display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 14px; color: var(--muted); }
+.status { display: inline-flex; align-items: center; gap: 8px; }
+.status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--line-strong); }
+.status[data-s="partial"], .status[data-s="done"] { color: var(--ink); }
+.status[data-s="partial"]::before { border-color: var(--ink); background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); }
+.status[data-s="done"]::before { border-color: var(--ink); background: var(--ink); }
+
+/* seção: rótulo à esquerda, conteúdo à direita */
+section {
+  display: grid; grid-template-columns: 168px minmax(0, 1fr); column-gap: 40px; row-gap: 16px; align-items: start;
+  border-top: 1px solid var(--line); padding-top: 26px;
+}
+section > * { grid-column: 2; min-width: 0; }
+section > h2 { grid-column: 1; grid-row: 1; font-size: 14px; font-weight: 600; line-height: 1.5; padding-top: 2px; text-wrap: balance; }
+section > p { max-width: 62ch; }
+ul.plain, ol.plain { margin: 0; padding-left: 1.15em; display: flex; flex-direction: column; gap: 8px; max-width: 62ch; }
+ul.plain li::marker, ol.plain li::marker { color: var(--muted); }
+.note { font-size: 14.5px; line-height: 1.6; color: var(--muted); max-width: 62ch; }
+
+/* passos e critérios com caixa de marcar */
+ol.todo, ul.done { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ol.todo { gap: 22px; counter-reset: step; }
+ol.todo > li, ul.done > li { display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 14px; }
+ol.todo > li { counter-increment: step; }
+ol.todo .body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+ol.todo label::before { content: counter(step) "."; display: inline-block; min-width: 1.7em; color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.todo label, ul.done label { cursor: pointer; max-width: 62ch; }
+ol.todo input:checked + .body > label { color: var(--muted); }
+input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 4px 0 0; flex: none;
+  display: grid; place-content: center; cursor: pointer;
+  border: 1.5px solid var(--line-strong); border-radius: 5px; background: var(--bg);
+}
+input[type="checkbox"]:hover { border-color: var(--ink); }
+input[type="checkbox"]:checked { background: var(--ink); border-color: var(--ink); }
+input[type="checkbox"]:checked::after {
+  content: ""; width: 9px; height: 5px; margin-top: -2px;
+  border-left: 2px solid var(--on-ink); border-bottom: 2px solid var(--on-ink); transform: rotate(-45deg);
+}
+
+/* código: legenda e "Copiar" acima do bloco */
+.code { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 6px; align-items: end; }
+.code figcaption { grid-column: 1; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.code .copy { grid-column: 2; grid-row: 1; background: none; border: 0; padding: 0; cursor: pointer; font: 500 13px/1.4 var(--font-sans); color: var(--muted); }
+.code .copy:hover { color: var(--ink); }
+.code pre {
+  grid-column: 1 / -1; margin: 0; padding: 14px 16px; overflow-x: auto; tab-size: 2;
+  background: var(--surface); border-radius: 10px; font-size: 13px; line-height: 1.6;
+}
+.code pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+/* tabelas: só linhas finas */
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.5; }
+th, td { text-align: left; vertical-align: top; padding: 10px 18px 10px 0; border-bottom: 1px solid var(--line); }
+th:last-child, td:last-child { padding-right: 0; }
+th { padding-top: 0; font-size: 13px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* por quê: a situação à esquerda, a explicação à direita */
+.why dl { margin: 0; display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); column-gap: 28px; }
+.why dt, .why dd { margin: 0; padding: 14px 0; border-top: 1px solid var(--line); line-height: 1.55; }
+.why dt:first-of-type, .why dd:first-of-type { border-top: 0; padding-top: 0; }
+.why dt { font-weight: 600; font-size: 15px; text-wrap: balance; }
+.why dd { font-size: 15.5px; }
+
+/* terminou quando: a única caixa da etapa */
+.gate ul.done { gap: 14px; padding: 18px 20px; border: 1px solid var(--line-strong); border-radius: 12px; }
+.done-msg { display: none; align-items: baseline; flex-wrap: wrap; gap: 6px 18px; margin: 0; font-size: 15px; font-weight: 600; }
+.view.is-done .done-msg { display: flex; }
+.done-msg a, .done-msg button { font-weight: 400; }
+.done-msg button { background: none; border: 0; padding: 0; font: inherit; font-weight: 400; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.done-msg button:hover { color: var(--ink); }
+
+/* se travar */
+.help p { font-size: 14.5px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 400 13px/1.5 var(--font-mono); text-align: left; cursor: pointer; color: var(--ink); background: var(--surface); border: 0; border-radius: 6px; padding: 4px 10px; }
+.chip:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* visão geral: o caminho de um request e o índice */
+ol.path, ol.index { list-style: none; margin: 0; padding: 0; }
+ol.path { counter-reset: stop; }
+ol.path li {
+  counter-increment: stop; display: grid; grid-template-columns: 22px 150px minmax(0, 1fr) auto; column-gap: 16px;
+  padding: 14px 0; border-top: 1px solid var(--line); font-size: 15px; line-height: 1.5;
+}
+ol.path li:first-child { border-top: 0; padding-top: 0; }
+ol.path li::before { content: counter(stop); grid-column: 1; grid-row: 1 / span 2; color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.path b { grid-column: 2; grid-row: 1 / span 2; font-weight: 600; }
+ol.path li > span { grid-column: 3; }
+ol.path .out { color: var(--muted); }
+ol.path a { grid-column: 4; grid-row: 1 / span 2; font-size: 14px; white-space: nowrap; }
+ol.index a {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) 56px 60px 10px; column-gap: 16px; align-items: center;
+  padding: 12px 0; border-top: 1px solid var(--line); text-decoration: none;
+}
+ol.index li:first-child a { border-top: 0; padding-top: 0; }
+ol.index .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.index .t { font-weight: 500; }
+ol.index a:hover .t { text-decoration: underline; text-underline-offset: 3px; }
+ol.index .d, ol.index .h { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.index .s { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--line-strong); }
+ol.index a[data-s="partial"] .s { border-color: var(--ink); background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); }
+ol.index a[data-s="done"] .s { border-color: var(--ink); background: var(--ink); }
+
+/* anterior e próxima */
+.pager { display: flex; justify-content: space-between; gap: 24px; border-top: 1px solid var(--line); padding-top: 28px; }
+.pager a { display: flex; flex-direction: column; gap: 6px; max-width: 48%; text-decoration: none; }
+.pager a.next { margin-left: auto; text-align: right; align-items: flex-end; }
+.pager small { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.pager span { font-size: clamp(19px, 2.6vw, 26px); font-weight: 600; font-stretch: 86%; letter-spacing: -0.02em; line-height: 1.15; }
+.pager a:hover span { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 5px; }
+kbd { font-size: 11px; line-height: 1; padding: 3px 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); }
+@media (hover: none) { kbd { display: none; } }
+
+.foot {
+  max-width: 920px; margin: 72px auto 0; padding-top: 20px; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted);
+}
+.foot button { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.foot button:hover { color: var(--ink); }
+
+/* controles no estilo clássico: cantos retos, relevo de 1px */
+::selection { background: var(--accent); color: #ffffff; }
+:focus-visible { outline: 1px dotted var(--ink); outline-offset: 3px; border-radius: 0; }
+a:hover { color: var(--accent); text-decoration-color: var(--accent); }
+code { border-radius: 0; }
+.status::before, ol.index .s { border-radius: 0; border-color: var(--shadow); }
+input[type="checkbox"], input[type="checkbox"]:hover, input[type="checkbox"]:checked {
+  width: 17px; height: 17px; border-radius: 0; background: var(--hi);
+  border: 1px solid; border-color: var(--shadow) var(--face) var(--face) var(--shadow); box-shadow: inset 1px 1px 0 var(--dark);
+}
+input[type="checkbox"]:checked::after { border-left-color: var(--ink); border-bottom-color: var(--ink); margin: -1px 0 0 1px; }
+.code pre { border-radius: 0; border: 1px solid var(--face); }
+.chip, kbd {
+  border-radius: 0; background: var(--face); color: var(--ink);
+  border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi); box-shadow: inset -1px -1px 0 var(--shadow);
+}
+.chip { padding: 3px 10px; }
+.chip:hover { text-decoration: none; }
+.chip:active { border-color: var(--dark) var(--hi) var(--hi) var(--dark); box-shadow: inset 1px 1px 0 var(--shadow); }
+.gate ul.done { border-radius: 0; border-color: var(--shadow); }
+
+/* cada passo: o que fazer (em negrito), o que é cada coisa nova, como conferir */
+ol.todo label b { font-weight: 700; }
+dl.what { margin: 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--face); font-size: 14.5px; line-height: 1.55; max-width: 64ch; }
+dl.what::before { content: "O que é"; display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+dl.what dt { font-weight: 600; }
+dl.what dd { margin: 0 0 9px; }
+dl.what dd:last-child { margin-bottom: 0; }
+.check { font-size: 14.5px; line-height: 1.6; color: var(--muted); max-width: 62ch; }
+.check b { color: var(--ink); font-weight: 600; }
+
+/* perguntas de entrevista: abrem no clique */
+.qa { display: flex; flex-direction: column; max-width: 64ch; }
+.qa details { border-top: 1px solid var(--line); }
+.qa details:first-child { border-top: 0; }
+.qa summary { cursor: pointer; padding: 12px 0; font-weight: 600; list-style: none; display: flex; gap: 10px; }
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary::before {
+  content: "+"; flex: none; width: 17px; height: 17px; margin-top: 3px; display: grid; place-items: center;
+  font: 600 12px/1 var(--font-mono); background: var(--face);
+  border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi);
+}
+.qa details[open] summary::before { content: "−"; }
+.qa details p { padding: 0 0 14px 27px; font-size: 15.5px; }
+.view > header .lede a { color: inherit; }
+
+
+/* seletor de idioma: dois botões pequenos no estilo clássico; o idioma atual fica "pressionado" */
+.lang { display: flex; flex: none; }
+.lang a {
+  display: grid; place-items: center; min-width: 30px; height: 22px; padding: 0 6px;
+  font: 600 11px/1 var(--font-sans); letter-spacing: 0.02em; color: var(--ink); text-decoration: none;
+  background: var(--face); border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi);
+  box-shadow: inset -1px -1px 0 var(--shadow); -webkit-tap-highlight-color: transparent;
+}
+.lang a + a { margin-left: -1px; }
+.lang a[aria-current="true"] { background: var(--hi); border-color: var(--dark) var(--hi) var(--hi) var(--dark); box-shadow: inset 1px 1px 0 var(--shadow); }
+@media (max-width: 760px) { .bar { column-gap: 10px; } .brand { font-size: 14px; } .lang a { min-width: 32px; height: 30px; font-size: 12px; } .loadbar i { width: 7px; } }
+@media (max-width: 380px) { .loadbar i { width: 5px; } .brand { font-size: 13px; } }
+
+@media (max-width: 760px) {
+  .bar { flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px 14px; }
+  .brand { margin-right: auto; }
+  .route { order: 5; flex-basis: 100%; max-width: none; margin: 0; }
+  /* no celular, cada número ocupa uma célula de largura igual e 44 px de altura: o toque cai sempre
+     no número mais próximo, e a linha entre eles fica atrás, sem ser parte de nenhum link */
+  .route {
+    display: grid; grid-template-columns: repeat(10, minmax(0, 1fr));
+    background: linear-gradient(var(--shadow), var(--shadow)) center / calc(100% - 30px) 1px no-repeat;
+  }
+  .route a, .route a:last-child { flex: none; justify-content: center; min-height: 44px; }
+  .route a::after { display: none; }
+  .dot { width: 30px; height: 30px; font-size: 13px; }
+  main { padding: 44px 16px 72px; }
+  .view { gap: 36px; }
+  section { grid-template-columns: minmax(0, 1fr); row-gap: 14px; padding-top: 22px; }
+  section > *, section > h2 { grid-column: 1; }
+  .why dl { grid-template-columns: minmax(0, 1fr); }
+  .why dt { padding-bottom: 2px; }
+  .why dd { border-top: 0; padding-top: 0; }
+  .why dd:first-of-type { padding-top: 0; }
+  ol.path li { grid-template-columns: 22px minmax(0, 1fr); }
+  ol.path b, ol.path li > span, ol.path a { grid-column: 2; grid-row: auto; }
+  ol.index a { grid-template-columns: 22px minmax(0, 1fr) 48px 10px; }
+  ol.index .h { display: none; }
+  .pager a { max-width: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .view.enter { animation: enter 0.16s ease-out; }
+  @keyframes enter { from { opacity: 0; } to { opacity: 1; } }
+  .dot, input[type="checkbox"], .gate ul.done { transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s; }
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="#visao-geral" data-nav="visao-geral">System design with LLMs</a>
+  <nav class="route" aria-label="Lessons"><a href="#licao-1" data-nav="licao-1" title="Reverse proxy" aria-label="Lesson 1: Reverse proxy"><span class="dot">1</span></a><a href="#licao-2" data-nav="licao-2" title="Streaming" aria-label="Lesson 2: Streaming"><span class="dot">2</span></a><a href="#licao-3" data-nav="licao-3" title="Rate limiting by tokens" aria-label="Lesson 3: Rate limiting by tokens"><span class="dot">3</span></a><a href="#licao-4" data-nav="licao-4" title="Load balancing" aria-label="Lesson 4: Load balancing"><span class="dot">4</span></a><a href="#licao-5" data-nav="licao-5" title="Failover, retries and backoff" aria-label="Lesson 5: Failover, retries and backoff"><span class="dot">5</span></a><a href="#licao-6" data-nav="licao-6" title="Circuit breaker" aria-label="Lesson 6: Circuit breaker"><span class="dot">6</span></a><a href="#licao-7" data-nav="licao-7" title="Queues and load shedding" aria-label="Lesson 7: Queues and load shedding"><span class="dot">7</span></a><a href="#licao-8" data-nav="licao-8" title="Response caching" aria-label="Lesson 8: Response caching"><span class="dot">8</span></a><a href="#licao-9" data-nav="licao-9" title="Metrics and load testing" aria-label="Lesson 9: Metrics and load testing"><span class="dot">9</span></a><a href="#entrevista" data-nav="entrevista" title="Interview questions" aria-label="Interview questions"><span class="dot">?</span></a></nav>
+  <nav class="lang" aria-label="Language"><a href="../" lang="pt-BR" hreflang="pt-BR">PT</a><a href="./" lang="en" aria-current="true">EN</a></nav>
+  <div class="loadbar" id="loadbar" role="progressbar" aria-label="Lessons read" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" title="0 of 9 lessons read"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</header>
+
+<main>
+
+<!-- ============================ OVERVIEW ============================ -->
+<article class="view" id="view-visao-geral" data-view="visao-geral">
+  <header>
+    <div class="eyebrow"><span class="tag">9 lessons</span><span class="tag">10 to 15 min each</span><span class="tag">Open source</span></div>
+    <h1>System design with an LLM gateway</h1>
+    <p class="lede">The architecture concepts that show up when a product runs LLMs in production, explained with the code and the numbers of a project that actually runs: the <a href="https://github.com/nicomsz/llm-gateway">llm-gateway</a>.</p>
+  </header>
+
+  <section>
+    <h2>What an LLM gateway is</h2>
+    <p>It is a server that sits between your apps and the model APIs (Anthropic, OpenAI and others). The apps call the gateway instead of the provider, and the gateway solves in one place what every app with an LLM ends up needing.</p>
+    <p>Without a gateway, each service calls the model API directly, with the real key:</p>
+    <figure class="code"><figcaption>in each service, without a gateway</figcaption><pre><code>const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });</code></pre></figure>
+    <p>With the gateway, the service only changes the address and the key. The rest of the code stays the same, because the gateway speaks the same API format:</p>
+    <figure class="code"><figcaption>in each service, with a gateway</figcaption><pre><code>const client = new Anthropic({ baseURL: 'http://localhost:3000', apiKey: 'gw_acme_123' });</code></pre></figure>
+  </section>
+
+  <section class="why">
+    <h2>The problems it solves</h2>
+    <dl>
+      <dt>The provider goes down</dt>
+      <dd>The model API returns overload errors for 20 minutes, and your product goes down with it. The gateway switches providers on its own.</dd>
+      <dt>One customer uses up everyone's quota</dt>
+      <dd>A customer fires requests in a loop and burns the tokens that belonged to everyone else. The gateway limits each customer separately.</dd>
+      <dt>Nobody knows what it costs</dt>
+      <dd>Someone asks "how much did customer X cost this month?" and there is no way to answer. The gateway records the tokens and the cost of every request.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>The path of a request</h2>
+    <p>Every request goes through these stops, in this order. Each stop answers one question and can end the request right there.</p>
+    <ol class="path">
+      <li><b>Authentication</b><span>Who is the customer?</span><span class="out">Rejects with <code>401</code></span><a href="#licao-1">lesson 1</a></li>
+      <li><b>Cache</b><span>Has this question been answered already?</span><span class="out">Answers right away, without calling the provider</span><a href="#licao-8">lesson 8</a></li>
+      <li><b>Rate limit</b><span>Does the customer still have tokens left?</span><span class="out">Rejects with <code>429</code></span><a href="#licao-3">lesson 3</a></li>
+      <li><b>Load balancer</b><span>Which provider should get it?</span><span class="out">Picks among the healthy ones</span><a href="#licao-4">lesson 4</a></li>
+      <li><b>Circuit breaker</b><span>Is this provider failing?</span><span class="out">Skips the provider</span><a href="#licao-6">lesson 6</a></li>
+      <li><b>Queue</b><span>Does the provider have a free slot now?</span><span class="out">Waits, or rejects with <code>503</code></span><a href="#licao-7">lesson 7</a></li>
+      <li><b>Call and streaming</b><span>Passes the response along as it arrives</span><span class="out">If it fails, tries another provider</span><a href="#licao-2">lesson 2</a></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>The 9 lessons</h2>
+    <ol class="index"><li><a href="#licao-1" data-idx="1"><span class="n">1</span><span class="t">Reverse proxy</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-2" data-idx="2"><span class="n">2</span><span class="t">Streaming</span><span class="d">15 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-3" data-idx="3"><span class="n">3</span><span class="t">Rate limiting by tokens</span><span class="d">15 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-4" data-idx="4"><span class="n">4</span><span class="t">Load balancing</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-5" data-idx="5"><span class="n">5</span><span class="t">Failover, retries and backoff</span><span class="d">15 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-6" data-idx="6"><span class="n">6</span><span class="t">Circuit breaker</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-7" data-idx="7"><span class="n">7</span><span class="t">Queues and load shedding</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-8" data-idx="8"><span class="n">8</span><span class="t">Response caching</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-9" data-idx="9"><span class="n">9</span><span class="t">Metrics and load testing</span><span class="d">15 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#entrevista"><span class="n">?</span><span class="t">Interview questions</span><span class="d"></span><span class="h"></span><span class="s none" aria-hidden="true"></span></a></li></ol>
+  </section>
+
+  <section>
+    <h2>Terms used in the guide</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Term</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td>Tenant</td><td>A customer of the gateway: an app, a team or a company. Each tenant has its own key and its own quota.</td></tr>
+        <tr><td>Provider</td><td>The API that runs the model. In the project, there are three fake providers that imitate the Anthropic API.</td></tr>
+        <tr><td>Token</td><td>The piece of text the model reads or writes, and the unit it is billed in. A token is about 4 characters.</td></tr>
+        <tr><td>SSE</td><td>Server-Sent Events: the format the API uses to send the response in pieces, over the same HTTP connection.</td></tr>
+        <tr><td>TTFT</td><td>Time to first token: how long until the first piece of the response arrives. It is what the user feels as "it started answering".</td></tr>
+        <tr><td>p50 and p99</td><td>The latency that 50% and 99% of requests stayed under. The p99 shows the worst case that still happens often.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>How each lesson works</h2>
+    <p>Every lesson has the same parts, always in the same order:</p>
+    <ol class="plain">
+      <li><b>In one sentence:</b> what the concept is.</li>
+      <li><b>When you need it:</b> real situations where it is the right choice.</li>
+      <li><b>Why it is the usual choice:</b> what it gains over the alternatives.</li>
+      <li><b>How it works:</b> the flow, step by step, and the piece of the project's code that does it.</li>
+      <li><b>What the experiment showed:</b> the mechanism on and off, with measured numbers.</li>
+      <li><b>Interview question:</b> a question that often comes up on the topic, with a short answer.</li>
+    </ol>
+    <p>A lesson counts as read when you scroll its page to the end. Each lesson read lights up a block in the top bar, and the progress is saved in this browser.</p>
+  </section>
+
+  <section>
+    <h2>About the numbers</h2>
+    <p>The numbers in the lessons come from the repository's <code>pnpm bench</code> command. It starts three fake providers, with a fixed latency of 100 ms, and the gateway, all on the same machine. The numbers show the effect of each mechanism, not the performance against a real API. You can run it and check:</p>
+    <figure class="code"><figcaption>in the terminal</figcaption><pre><code>git clone https://github.com/nicomsz/llm-gateway
+cd llm-gateway
+pnpm install
+pnpm test     # 94 tests
+pnpm bench    # the experiments, about 3 minutes</code></pre></figure>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="next" href="#licao-1"><small>Start here<kbd>→</kbd></small><span>Reverse proxy</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 1 ============================ -->
+<article class="view" id="view-licao-1" data-view="licao-1" data-step="1" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 1 of 9</span><span class="tag">10 min</span><span class="tag status">Not read</span></div>
+    <h1>Reverse proxy: the gateway in the middle</h1>
+    <p class="lede">Why put one more server between the app and the provider, and how much that costs in latency.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p>A <b>reverse proxy</b> is a server that receives requests in place of the real server, decides what to do with each one and forwards it to whoever answers. An LLM gateway is a reverse proxy specialized in model APIs.</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>More than one app uses LLMs</dt>
+      <dd>Without a central point, each app reimplements retries, limits and logging its own way, and each one holds a copy of the real API key.</dd>
+      <dt>The key cannot leak</dt>
+      <dd>The app gets a gateway key (<code>gw_acme_123</code>). The real provider key lives only in the gateway. If the app's key leaks, you revoke just that one.</dd>
+      <dt>You need to switch providers</dt>
+      <dd>With the gateway, changing providers or adding a second one is a config change in one place, with no deploy of the apps.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p>The alternative is a shared library installed in every app. It handles retries and logging, but not what depends on shared state: a tenant's quota has to be counted in a single place, even if the tenant uses three apps. The library also spreads the real key across every app, and a fix in it means updating and shipping each app again.</p>
+    <p>The cost of the gateway is one more network hop and one more thing that can go down. That is why it needs to be light (the experiment below measures this) and run as more than one copy.</p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <ol class="plain">
+      <li>The app sends <code>POST /v1/messages</code> to the gateway, with the tenant key in the <code>x-api-key</code> header.</li>
+      <li>The gateway looks up the key in the list of tenants. If it is not there, it answers <code>401</code> and stops.</li>
+      <li>It goes through the other stops (cache, rate limit, load balancer) and calls the chosen provider, now with the real key.</li>
+      <li>The provider's response goes back to the app unchanged. The gateway only adds its own headers, such as <code>x-gateway-upstream</code>, which says which provider answered.</li>
+      <li>At the end, the gateway writes one log line with the tenant, the provider, the latency, the tokens and the cost.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: authentication</figcaption><pre><code>const key = req.headers['x-api-key'];
+tenant = typeof key === 'string' &amp;&amp; Object.hasOwn(config.tenants, key) ? config.tenants[key] : undefined;
+if (!tenant) return sendError(res, 401, 'authentication_error', 'chave de tenant inválida');</code></pre></figure>
+    <p class="note">Why <code>Object.hasOwn</code> and not <code>config.tenants[key]</code> directly: with direct access, the key <code>"constructor"</code> would find a function inherited from <code>Object</code> and pass as a tenant.</p>
+  </section>
+
+  <section>
+    <h2>What the experiment showed</h2>
+    <p>2,000 requests, 20 at a time, to a fake provider that answers in 100 ms. First directly, then through the gateway.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Path</th><th>p50</th><th>p99</th><th>Requests per second</th></tr></thead>
+      <tbody>
+        <tr><td>Straight to the provider</td><td class="num">102.9 ms</td><td class="num">113.2 ms</td><td class="num">193</td></tr>
+        <tr><td>Through the gateway</td><td class="num">103.9 ms</td><td class="num">119.4 ms</td><td class="num">189</td></tr>
+      </tbody>
+    </table></div>
+    <p>The gateway added 1 ms to the median and 6 ms to the p99. Next to an LLM call, which takes from hundreds of milliseconds to several seconds, that is noise.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>Doesn't the gateway become a single point of failure?</b></p>
+    <p>It does, if you run a single copy. That is why it runs as several copies behind a regular load balancer, and the state that needs to be shared (tenant quotas and the cache) lives in Redis, not in each copy's memory. Lesson 3 shows what happens when Redis itself goes down.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#visao-geral"><small><kbd>←</kbd>Previous</small><span>Overview</span></a><a class="next" href="#licao-2"><small>Next<kbd>→</kbd></small><span>Streaming</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 2 ============================ -->
+<article class="view" id="view-licao-2" data-view="licao-2" data-step="2" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 2 of 9</span><span class="tag">15 min</span><span class="tag status">Not read</span></div>
+    <h1>Streaming, backpressure and cancellation</h1>
+    <p class="lede">How to pass the response along in pieces without holding anything back, without blowing up memory, and without paying for text nobody will read.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p>With <b>streaming</b>, the provider sends the response in pieces while the model generates it, and the gateway forwards each piece to the app as soon as it arrives.</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>Chat with the user waiting</dt>
+      <dd>A long answer takes 10 seconds to be ready. With streaming, the text starts showing in under 1 second. The total time is the same; what changes is when the user sees the first piece (the TTFT).</dd>
+      <dt>The user closes the tab</dt>
+      <dd>The model keeps generating text, and you keep paying for it, unless someone tells the provider nobody is reading anymore.</dd>
+      <dt>The client is on a slow network</dt>
+      <dd>The provider sends faster than the customer's phone can receive. Without control, the gateway piles up the excess in memory.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p>The Messages API uses <b>SSE</b> (Server-Sent Events): the response is a regular HTTP response, with <code>content-type: text/event-stream</code>, that does not end until the last event. Compared to WebSocket, SSE is plain HTTP: it uses the same headers, the same authentication and the same tools as any request, and data only flows from the server to the client, which is exactly the case of a model response.</p>
+    <p>The gateway does not assemble the whole response before passing it on. If it did, the app's TTFT would be the total response time, and the provider's streaming would be useless.</p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p>What travels over the connection is text, one event per block, separated by a blank line:</p>
+    <figure class="code"><figcaption>the provider's response, as it arrives</figcaption><pre><code>event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":24,"output_tokens":1}}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
+
+event: message_delta
+data: {"type":"message_delta","usage":{"output_tokens":12}}
+
+event: message_stop
+data: {"type":"message_stop"}</code></pre></figure>
+    <p>The gateway does three things with this stream, at the same time:</p>
+    <ol class="plain">
+      <li><b>Forwards</b> each piece to the app as soon as it arrives, without waiting for the next one.</li>
+      <li><b>Reads</b> the events on the way, to know how many tokens were used (<code>message_start</code> carries the input, <code>message_delta</code> carries the running output total) and compute the cost.</li>
+      <li><b>Respects the client's pace:</b> <code>res.write()</code> returns <code>false</code> when the output buffer to the client is full. Then the gateway stops reading from the provider until the <code>drain</code> event, which says the buffer emptied. That is <b>backpressure</b>: whoever receives more slowly controls the speed of whoever sends.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: the streaming loop</figcaption><pre><code>for await (const chunk of response.body!) {
+  log.ttftMs ??= Math.round(performance.now() - startedAt);
+  tracker.feed(parser.push(chunk));
+  // backpressure: if the client can't keep up, stop reading from the provider
+  if (!res.write(chunk)) await once(res, 'drain', { signal: abort.signal });
+}</code></pre></figure>
+    <p>And cancellation: when the app closes the connection before the end, the gateway cancels the call to the provider with an <code>AbortController</code>. The connection to the provider closes, and it stops generating.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: the client left</figcaption><pre><code>const client = new AbortController();
+res.on('close', () =&gt; {
+  if (!res.writableEnded) {
+    log.canceled = true;
+    client.abort();   // cancels the queue, the wait and the call to the provider
+  }
+});</code></pre></figure>
+  </section>
+
+  <section>
+    <h2>What the experiment showed</h2>
+    <p>A provider that sends the first piece in 200 ms and then 20 pieces, one every 50 ms. 300 requests, 20 at a time.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Path</th><th>First piece, p50</th><th>First piece, p99</th><th>Full response, p50</th></tr></thead>
+      <tbody>
+        <tr><td>Straight to the provider</td><td class="num">202 ms</td><td class="num">207 ms</td><td class="num">1,208 ms</td></tr>
+        <tr><td>Through the gateway</td><td class="num">203 ms</td><td class="num">221 ms</td><td class="num">1,208 ms</td></tr>
+      </tbody>
+    </table></div>
+    <p>The first piece arrives through the gateway 1 ms after it arrives directly. If the gateway assembled the response before forwarding it, that number would be 1,208 ms.</p>
+    <p>In the cancellation test, 100 clients closed the connection 400 ms after sending. All 100 cancellations reached the provider, which generated 429 of the 2,000 pieces it would have generated: 21% of the text, and of the cost.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>Why doesn't the gateway keep the whole response and send it at once?</b></p>
+    <p>Because the app's TTFT would become the total response time, and the gateway's memory would grow with the size of each response times the number of requests in flight. Forwarding piece by piece, with backpressure, each request takes at most the size of one buffer.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-1"><small><kbd>←</kbd>Previous</small><span>Reverse proxy</span></a><a class="next" href="#licao-3"><small>Next<kbd>→</kbd></small><span>Rate limiting by tokens</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 3 ============================ -->
+<article class="view" id="view-licao-3" data-view="licao-3" data-step="3" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 3 of 9</span><span class="tag">15 min</span><span class="tag status">Not read</span></div>
+    <h1>Rate limiting by tokens</h1>
+    <p class="lede">How to stop one tenant from using up everyone's capacity, counting what actually costs money: tokens, not requests.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p>A <b>rate limit</b> caps how much each tenant can consume per unit of time. Here it is counted in model tokens, with the <b>token bucket</b> algorithm.</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>A tenant with a bug in a loop</dt>
+      <dd>An app gets stuck in a loop and sends 300 requests per second. Without a per-tenant limit, it takes up the provider's capacity, and the other tenants get errors.</dd>
+      <dt>Requests of very different sizes</dt>
+      <dd>A 50-token request and a 50,000-token one cost very different amounts. A "100 requests per minute" limit lets the expensive one through and blocks the cheap one.</dd>
+      <dt>Free plan and paid plan</dt>
+      <dd>Each tenant has its own quota. Changing a customer's plan is changing a number.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p>The token bucket keeps only two numbers per tenant: the balance and the time of the last update. The balance refills at a fixed rate up to a cap, and each request takes from it. Compared to a fixed window ("6,000 tokens per minute, reset on the minute"), it does not let the tenant spend the whole quota at the end of one minute and again at the start of the next. Compared to keeping the time of every request (sliding window), it uses constant memory.</p>
+    <p>The LLM-specific problem: you only know how many tokens a request used after the response. The solution is to <b>reserve and refund</b>: on the way in, the gateway takes an estimate (the text length divided by 4, plus the requested <code>max_tokens</code>); at the end, it gives back to the balance whatever was not used.</p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p>Example with a quota of 6,000 tokens per minute, that is, a refill of 100 tokens per second:</p>
+    <ol class="plain">
+      <li>The tenant arrives with a full balance: 6,000.</li>
+      <li>A request is estimated at 1,200 tokens. The balance drops to 4,800, and the request goes through.</li>
+      <li>The response used only 300. The gateway refunds 900: the balance goes to 5,700.</li>
+      <li>If a request estimates more than the balance, the gateway answers <code>429</code> with the <code>retry-after</code> header: how many seconds until the refill covers the difference.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/tokenBucket.ts">src/gateway/tokenBucket.ts</a>: refill and take</figcaption><pre><code>const elapsedSec = Math.max(0, now - bucket.ts) / 1000;
+bucket.tokens = Math.min(capacity, bucket.tokens + elapsedSec * ratePerSec);
+bucket.ts = now;
+
+if (amount &lt;= bucket.tokens) {
+  bucket.tokens -= amount;
+  return { allowed: true, remaining: Math.floor(bucket.tokens), retryAfterSec: 0 };
+}
+return { allowed: false, remaining: Math.floor(bucket.tokens),
+         retryAfterSec: Math.ceil((amount - bucket.tokens) / ratePerSec) };</code></pre></figure>
+    <p>With several copies of the gateway, the balance has to live in one place: Redis. But "read the balance, compute, write" as three separate commands has a race: two copies read the same balance of 1,000, both take 800, and both let the request through. That is why the math runs in a <b>Lua script</b> inside Redis, which runs the whole script before serving any other command.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/redis.ts">src/gateway/redis.ts</a>: the same math, atomic, in Redis</figcaption><pre><code>local data = redis.call('HMGET', KEYS[1], 'tokens', 'ts')
+-- ... same refill as the in-memory version ...
+if amount &lt;= tokens then
+  tokens = tokens - amount
+  allowed = 1
+end
+redis.call('HSET', KEYS[1], 'tokens', tostring(tokens), 'ts', tostring(now))</code></pre></figure>
+    <p>And if Redis goes down? The gateway lets the request through (<b>fail open</b>): it goes without limits for a while instead of taking every tenant down along with Redis. For a system where blowing the quota costs more than being down, the right choice would be the opposite (<b>fail closed</b>).</p>
+  </section>
+
+  <section>
+    <h2>What the experiment showed</h2>
+    <p>A provider with capacity for about 100 requests per second. The tenant <code>acme</code> sends 300 per second; the tenant <code>beta</code> sends 20 per second.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Setup</th><th>beta: errors</th><th>beta: p50</th><th>acme: served</th><th>acme: 429</th></tr></thead>
+      <tbody>
+        <tr><td>No rate limit</td><td class="num">75.1%</td><td class="num">1,137 ms</td><td class="num">1,665</td><td class="num">0</td></tr>
+        <tr><td>With rate limit</td><td class="num">0%</td><td class="num">104 ms</td><td class="num">245</td><td class="num">4,855</td></tr>
+      </tbody>
+    </table></div>
+    <p>Without a limit, <code>beta</code>, which sent little, lost three out of four requests because of <code>acme</code>. With the limit, <code>acme</code> gets <code>429</code> and <code>beta</code> does not even notice its neighbor.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>Why count tokens, and not requests?</b></p>
+    <p>Because the cost and the load of an LLM request vary hundreds of times with the size of the text. A per-request limit treats the cheap and the expensive the same. The detail that shows you understood: the real cost is only known at the end, so you reserve an estimate on the way in and refund the difference on the way out.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-2"><small><kbd>←</kbd>Previous</small><span>Streaming</span></a><a class="next" href="#licao-4"><small>Next<kbd>→</kbd></small><span>Load balancing</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 4 ============================ -->
+<article class="view" id="view-licao-4" data-view="licao-4" data-step="4" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 4 of 9</span><span class="tag">10 min</span><span class="tag status">Not read</span></div>
+    <h1>Load balancing</h1>
+    <p class="lede">How to choose the provider for each request, and why the "smarter" strategy was the one that failed the most when a provider went down.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p><b>Load balancing</b> is the rule that decides which of the available providers each request goes to.</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>More than one account or region</dt>
+      <dd>Each API account has its own requests-per-minute limit. Two accounts, or the same API in two regions, add up capacity, as long as the traffic is split between them.</dd>
+      <dt>Providers with different speeds</dt>
+      <dd>One provider is slower today. Sending it the same amount as the others piles up requests waiting on it.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p>The two most common strategies, and the two the project implements:</p>
+    <ul class="plain">
+      <li><b>Round-robin:</b> one each, in order. It needs no information about the providers and splits evenly.</li>
+      <li><b>Least in flight:</b> sends to the provider with the fewest requests in progress. It adapts to a slower provider on its own, because its requests take longer to finish and its counter stays high.</li>
+    </ul>
+    <p>"Least in flight" is usually the better choice when response times vary a lot, which is the case with LLMs: one request may take 200 ms and the next one 30 seconds.</p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/balancer.ts">src/gateway/balancer.ts</a>: least in flight, with round-robin as the tiebreaker</figcaption><pre><code>let chosen = ordered[0]!;   // ordered: the candidates, starting after the last one chosen
+if (this.strategy === 'least-in-flight') {
+  const load = (state: UpstreamState) =&gt; state.limiter.inFlight + state.limiter.queued;
+  for (const state of ordered) if (load(state) &lt; load(chosen)) chosen = state;
+}
+this.cursor = this.all.indexOf(chosen);</code></pre></figure>
+    <p>A provider's load is how many requests are in progress on it plus how many are waiting in its queue. On a tie, the round-robin order wins, so everything does not go to the first one in the list.</p>
+  </section>
+
+  <section>
+    <h2>What the experiment showed</h2>
+    <p>Three 100 ms providers; one of them returning <code>529</code> (overloaded) for everything. 150 requests per second for 8 seconds, with no retries.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Strategy</th><th>Errors</th><th>Calls to the down provider</th></tr></thead>
+      <tbody>
+        <tr><td>Round-robin</td><td class="num">33.3%</td><td class="num">400 of 1,200</td></tr>
+        <tr><td>Least in flight</td><td class="num">87.2%</td><td class="num">1,046 of 1,200</td></tr>
+      </tbody>
+    </table></div>
+    <p>Round-robin failed exactly 1 out of 3, as expected. "Least in flight" failed almost everything. The reason: the down provider returns the error almost instantly, so it hardly ever has a request in progress. To the load balancer it is always the least busy one, and it gets almost everything.</p>
+    <p>The lesson: "least in flight" measures the queue, not health. A provider that fails fast looks great. What fixes this is the circuit breaker (lesson 6), which removes the sick provider from the list of candidates.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>Is least connections always better than round-robin?</b></p>
+    <p>No. It adapts to slow providers, but a provider that returns errors fast ends up with zero connections and starts getting all the traffic. It has to come together with a health check or a circuit breaker, which take the sick provider out of the choice.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-3"><small><kbd>←</kbd>Previous</small><span>Rate limiting by tokens</span></a><a class="next" href="#licao-5"><small>Next<kbd>→</kbd></small><span>Failover, retries and backoff</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 5 ============================ -->
+<article class="view" id="view-licao-5" data-view="licao-5" data-step="5" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 5 of 9</span><span class="tag">15 min</span><span class="tag status">Not read</span></div>
+    <h1>Failover, retries and backoff</h1>
+    <p class="lede">When it is worth trying again on another provider, how long to wait first, and the moment when switching is no longer possible.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p><b>Failover</b> is trying the same request on another provider when the first one fails; <b>backoff</b> is the wait between one attempt and the next.</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>The provider is overloaded</dt>
+      <dd>The API returns <code>529</code> (overloaded) or <code>503</code>. Another provider, or the same one a few seconds later, will probably answer.</dd>
+      <dt>The connection dropped on the way</dt>
+      <dd>The network failed before the response arrived. Either the request was never processed, or it was and the response got lost; for a question to a model, trying again solves both cases.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p>Not every error deserves a retry. The project's rule:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Result</th><th>Retry?</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Connection failure, timeout</td><td>Yes</td><td>A problem on the way or at the provider</td></tr>
+        <tr><td><code>429</code>, <code>529</code>, <code>500</code> to <code>504</code></td><td>Yes</td><td>The provider is overloaded or broken</td></tr>
+        <tr><td><code>400</code>, <code>401</code>, <code>404</code></td><td>No</td><td>The problem is the request: another provider would give the same answer</td></tr>
+      </tbody>
+    </table></div>
+    <p>And the wait between attempts doubles with each failure, up to a cap, multiplied by a random number between 0 and 1. That random number is the <b>jitter</b>: without it, 1,000 requests that failed in the same second all retry at the same instant and take down the provider that was recovering.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/balancer.ts">src/gateway/balancer.ts</a>: exponential backoff with jitter</figcaption><pre><code>export function backoffMs(attempt: number, random: number, baseMs = 200, capMs = 2000): number {
+  return Math.min(capMs, baseMs * 2 ** attempt) * random;
+}
+// attempt 1: up to 200 ms; attempt 2: up to 400 ms; attempt 3: up to 800 ms ... never more than 2 s</code></pre></figure>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <ol class="plain">
+      <li>The gateway picks a provider among the ones not yet tried for this request.</li>
+      <li>If it fails with an error worth retrying, the gateway waits the backoff and picks another one.</li>
+      <li>There is a total deadline per request. If the next wait would go past it, the gateway gives up and returns the last error.</li>
+      <li><b>The first-byte rule:</b> in streaming, once the first piece has been sent to the app, there is no more switching providers. The app has already shown part of the text; starting over on another provider would duplicate the answer. If the provider fails midway, the app gets an error event in the stream itself.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: the retry loop</figcaption><pre><code>for (let attempt = 0; attempt &lt; config.retry.maxAttempts &amp;&amp; !client.signal.aborted; attempt++) {
+  if (attempt &gt; 0) {
+    const wait = backoffMs(attempt - 1, random(), config.retry.baseMs, config.retry.capMs);
+    if (Date.now() + wait &gt;= deadline) break;
+    await sleep(wait);
+  }
+  const candidates = states.filter((s) =&gt; !tried.has(s) &amp;&amp; (!config.breaker.enabled || s.breaker.available()));
+  const state = balancer.pick(candidates);
+  if (!state) break;
+  tried.add(state);
+
+  const outcome = await attemptOnce(state, ctx);
+  if (outcome.kind === 'sent') break;     // it answered: done
+  if (!outcome.retryable) break;          // request error: another provider won't fix it
+}</code></pre></figure>
+  </section>
+
+  <section>
+    <h2>What the experiment showed</h2>
+    <p>The same scenario as lesson 4: three providers, one returning <code>529</code> for everything.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Setup</th><th>Errors</th><th>p50</th><th>p99</th><th>Calls to the down one</th></tr></thead>
+      <tbody>
+        <tr><td>Least in flight, no failover</td><td class="num">87.2%</td><td class="num">104 ms</td><td class="num">126 ms</td><td class="num">1,046</td></tr>
+        <tr><td>Least in flight, with failover</td><td class="num">0%</td><td class="num">206 ms</td><td class="num">303 ms</td><td class="num">1,196</td></tr>
+      </tbody>
+    </table></div>
+    <p>Failover brought errors to zero, but the median doubled. Almost every request (1,196 of 1,200) still tried the down provider first, got the error and waited the backoff (up to 200 ms, 100 ms on average) before going to a good provider. Failover alone trades errors for latency. Lesson 6 shows how to get the latency back.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>Why jitter in the backoff?</b></p>
+    <p>Because failures come in groups. Without jitter, every client that failed together waits the same time and retries at the same instant, creating a spike that can take the server down again (the <i>thundering herd</i> effect). The random number spreads the retries over time.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-4"><small><kbd>←</kbd>Previous</small><span>Load balancing</span></a><a class="next" href="#licao-6"><small>Next<kbd>→</kbd></small><span>Circuit breaker</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 6 ============================ -->
+<article class="view" id="view-licao-6" data-view="licao-6" data-step="6" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 6 of 9</span><span class="tag">10 min</span><span class="tag status">Not read</span></div>
+    <h1>Circuit breaker</h1>
+    <p class="lede">Stop calling a provider that is failing, and check every so often whether it came back.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p>The <b>circuit breaker</b> counts a provider's consecutive failures; past a limit, the gateway stops sending it requests for a while.</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>The provider returns errors</dt>
+      <dd>Every request still tries the down provider before moving on, and pays for the error plus the wait (lesson 5).</dd>
+      <dt>The provider hangs without answering</dt>
+      <dd>Worse than returning an error: every request that lands on it waits the whole timeout before giving up.</dd>
+      <dt>The provider is trying to recover</dt>
+      <dd>Keeping traffic on an overloaded service slows down its recovery.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p>The alternative is a health check: calling the provider every X seconds to see if it is alive. It takes up to X seconds to notice the outage and tests a health endpoint, not the real path. The circuit breaker uses the requests themselves as the signal: it notices the failure at the fifth error in a row, with no extra traffic.</p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p>Three states per provider:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>State</th><th>What happens</th><th>Changes when</th></tr></thead>
+      <tbody>
+        <tr><td>Closed</td><td>Requests go through; the breaker counts consecutive failures</td><td>5 failures in a row: goes to open</td></tr>
+        <tr><td>Open</td><td>No request goes to the provider</td><td>The wait time passes (2 s in the experiment): goes to half-open</td></tr>
+        <tr><td>Half-open</td><td>Lets 1 test request through</td><td>Success: closed. Failure: open again</td></tr>
+      </tbody>
+    </table></div>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/breaker.ts">src/gateway/breaker.ts</a>: the transitions</figcaption><pre><code>failure() {
+  this.tick();
+  this.probeInFlight = false;
+  if (this.current === 'half-open') return this.open();   // the test failed
+  if (this.current === 'open') return;
+  this.failures++;
+  if (this.failures &gt;= this.options.failureThreshold) this.open();
+}
+
+success() {
+  this.failures = 0;
+  this.probeInFlight = false;
+  if (this.current !== 'closed') this.transition('closed');
+}</code></pre></figure>
+    <p>A detail that matters: only what is the provider's fault counts as a failure (a <code>5xx</code> error, a timeout, a lost connection). A <code>400</code> is the request's fault, and a <code>429</code> is the quota: opening the circuit because of them would take a healthy provider offline.</p>
+  </section>
+
+  <section>
+    <h2>What the experiment showed</h2>
+    <p>Provider returning errors (the same scenario as lessons 4 and 5):</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Setup</th><th>Errors</th><th>p50</th><th>p99</th><th>Calls to the down one</th></tr></thead>
+      <tbody>
+        <tr><td>Failover, no circuit breaker</td><td class="num">0%</td><td class="num">206 ms</td><td class="num">303 ms</td><td class="num">1,196</td></tr>
+        <tr><td>Failover and circuit breaker</td><td class="num">0%</td><td class="num">104 ms</td><td class="num">115 ms</td><td class="num">8</td></tr>
+      </tbody>
+    </table></div>
+    <p>Hung provider, which accepts the connection and never answers. 1 s timeout per attempt; 150 requests per second for 15 s:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Setup</th><th>p50</th><th>p99</th><th>Requests over 1 s</th></tr></thead>
+      <tbody>
+        <tr><td>No circuit breaker</td><td class="num">104 ms</td><td class="num">1,270 ms</td><td class="num">138</td></tr>
+        <tr><td>With circuit breaker</td><td class="num">104 ms</td><td class="num">118 ms</td><td class="num">16</td></tr>
+      </tbody>
+    </table></div>
+    <p>Notice the median is the same in both rows: the p99 is what shows the problem. The 16 slow requests left with the breaker are the ones already waiting on the hung provider before the circuit opened, plus the test requests, one every few seconds.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>With several copies of the gateway, should the breaker's state live in Redis?</b></p>
+    <p>Here it lives in each copy's memory, and that is a choice. Each copy finds out about the outage on its own, after 5 failures of its own; with 10 copies, that is 50 bad requests instead of 5. In exchange, the request path does not depend on Redis to decide, and one copy with a network problem does not open the circuit for all of them.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-5"><small><kbd>←</kbd>Previous</small><span>Failover, retries and backoff</span></a><a class="next" href="#licao-7"><small>Next<kbd>→</kbd></small><span>Queues and load shedding</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 7 ============================ -->
+<article class="view" id="view-licao-7" data-view="licao-7" data-step="7" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 7 of 9</span><span class="tag">10 min</span><span class="tag status">Not read</span></div>
+    <h1>Bounded queues and load shedding</h1>
+    <p class="lede">How many requests each provider can take at once, what to do with the excess, and why refusing fast is better than making people wait.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p>Each provider has a maximum number of requests in progress; whoever arrives after that waits in a <b>queue with a maximum size and wait time</b>, and whatever does not fit is refused right away (<b>load shedding</b>).</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>The provider has a concurrency limit</dt>
+      <dd>Your account accepts, say, 50 concurrent requests. The 51st gets an error from the provider. It is better for the gateway to hold the 51st for a moment than to spend a call on a guaranteed error.</dd>
+      <dt>A spike bigger than capacity arrives</dt>
+      <dd>An unbounded queue grows without stopping, the wait grows with it, and the app gives up (timeout) after the gateway has already spent work on the request.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p>A queue absorbs short spikes: 10 extra requests for half a second wait a little and go through. But under sustained excess, a queue only postpones the failure. The rule that explains this is <b>Little's law</b>: the number of items in a system is the arrival rate times the time each one stays there.</p>
+    <p>Applied to the gateway: with 10 slots and 100 ms requests, the provider serves at most 10 ÷ 0.1 s = 100 requests per second. With 100 requests in the queue, the last one in waits 100 ÷ 100 per second = 1 second before being served. A queue of 10,000 would be a 100-second wait: nobody waits that long. That is why the queue has a maximum size and wait time, and the excess gets <code>503</code> with <code>retry-after</code> immediately.</p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <ol class="plain">
+      <li>Is there a free slot? The request takes it and moves on.</li>
+      <li>No free slot, but the queue has room? The request waits in the queue.</li>
+      <li>The queue is full, or the request waited longer than the maximum? Refuse with <code>503</code>.</li>
+      <li>When a request finishes, its slot goes straight to the first one in the queue.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/limiter.ts">src/gateway/limiter.ts</a>: asking for a slot</figcaption><pre><code>acquire(signal?: AbortSignal): Promise&lt;() =&gt; void&gt; {
+  if (this.inFlight &lt; this.options.maxInFlight) {
+    this.inFlight++;
+    return Promise.resolve(this.releaser());
+  }
+  if (this.queue.length &gt;= this.options.maxQueue) return Promise.reject(new QueueFullError());
+  // otherwise: join the queue, with a maxWaitMs timer and the client's cancellation wired in
+  ...
+}</code></pre></figure>
+    <p>The returned function frees the slot, and it is called in a <code>finally</code> block: on success, on error or when the client leaves, the slot always comes back. A slot that never comes back is a leak that only shows up hours later, when all of them are stuck.</p>
+  </section>
+
+  <section>
+    <h2>What the experiment showed</h2>
+    <p>In the noisy tenant test (lesson 3), the provider had 10 slots, a queue of 100 and a maximum wait of 3 s, and was getting 300 requests per second. Without a rate limit:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>What happened</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td><code>acme</code> requests refused with <code>503</code> by the queue</td><td class="num">3,435</td></tr>
+        <tr><td><code>acme</code> requests served</td><td class="num">1,665</td></tr>
+        <tr><td>Median for <code>beta</code>, which only sent 20 per second</td><td class="num">1,137 ms</td></tr>
+      </tbody>
+    </table></div>
+    <p>The 1,137 ms for <code>beta</code> is Little's law in numbers: about 1 s of full queue plus the provider's 100 ms. The queue protected the provider, but on its own it is fair to requests, not to tenants: whoever sends more takes more of the queue. Fairness between tenants is the rate limit's job.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>What is the difference between the queue and the rate limit, if both refuse requests?</b></p>
+    <p>The rate limit protects tenants from each other: it is per tenant and looks at consumption over time. The queue protects the provider: it is per provider and looks at how many requests are in progress right now. The experiment shows both together: the queue alone kept the provider up, but only the rate limit gave <code>beta</code> its service back.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-6"><small><kbd>←</kbd>Previous</small><span>Circuit breaker</span></a><a class="next" href="#licao-8"><small>Next<kbd>→</kbd></small><span>Response caching</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 8 ============================ -->
+<article class="view" id="view-licao-8" data-view="licao-8" data-step="8" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 8 of 9</span><span class="tag">10 min</span><span class="tag status">Not read</span></div>
+    <h1>Response caching</h1>
+    <p class="lede">Answering the same question without calling the model again, without mixing up customers and without letting 10 identical requests become 10 calls.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p>The <b>cache</b> keeps a request's response for a while; the same request, from the same tenant, gets the stored response without going to the provider.</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>Questions that repeat</dt>
+      <dd>A FAQ assistant gets "what are your opening hours?" hundreds of times a day, with the same settings. Each call costs tokens and takes seconds.</dd>
+      <dt>A spike of identical requests</dt>
+      <dd>A popular screen opens and 10 users trigger the same generation in the same second, before the first one finishes.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p>Three decisions in the project, each against a common mistake:</p>
+    <ul class="plain">
+      <li><b>Only when the client asks for it</b>, through the <code>x-gateway-cache: 60</code> header (seconds of validity). The caller is the one who knows whether the response can be reused: a FAQ can, a conversation with the user's context cannot.</li>
+      <li><b>The tenant is part of the key.</b> One tenant's response is never delivered to another, even if the question is identical.</li>
+      <li><b>One call for simultaneous identical requests</b> (<i>single-flight</i>). Without it, the 10 requests in the spike arrive before the first response exists, all find the cache empty, and all go to the provider.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p>The cache key is a hash of the tenant plus the request body, with the JSON keys in alphabetical order: <code>{"a":1,"b":2}</code> and <code>{"b":2,"a":1}</code> are the same request. The <code>stream</code> field is left out, because the response is the same; only the delivery format changes.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/cache.ts">src/gateway/cache.ts</a>: the key</figcaption><pre><code>export function cacheKey(tenant: string, body: Record&lt;string, unknown&gt;): string {
+  const { stream: _stream, ...rest } = body;
+  return `cache:${createHash('sha256').update(`${tenant}\n${stableStringify(rest)}`).digest('hex')}`;
+}</code></pre></figure>
+    <p>Single-flight is a map of calls in progress: the first request for a key registers a Promise; the next ones, instead of calling the provider, wait on that Promise.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: single-flight</figcaption><pre><code>let cached = await responses.get(flightKey);
+const pending = cached === null ? inProgress.get(flightKey) : undefined;
+if (pending) cached = await pending;       // someone is already fetching it: wait for their answer
+// ...
+if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) =&gt; (settleFlight = resolve)));</code></pre></figure>
+    <p>Only complete, successful responses go into the cache. A provider error, or a stream canceled midway, is not stored.</p>
+  </section>
+
+  <section>
+    <h2>What the experiment showed</h2>
+    <p>1,000 requests, 10 at a time; 30% of them repeat one of 10 frequent questions. That 30% is an assumption of the test, not real-world data.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Setup</th><th>Calls to the provider</th><th>Answered by the cache</th><th>Cost</th><th>Average latency</th></tr></thead>
+      <tbody>
+        <tr><td>No cache</td><td class="num">1,000</td><td class="num">0%</td><td class="num">US$ 0.159</td><td class="num">105 ms</td></tr>
+        <tr><td>With cache</td><td class="num">689</td><td class="num">31.1%</td><td class="num">US$ 0.110</td><td class="num">73 ms</td></tr>
+      </tbody>
+    </table></div>
+    <p>The cache answered 31.1%, practically all the repetition there was. What the test proves is that the mechanism works under concurrency; the real savings depend on how much your traffic repeats.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>What is a cache stampede and how do you avoid it?</b></p>
+    <p>It is when a cache entry does not exist (or expires) and many requests at the same time go fetch the same value from the origin. With LLMs, each fetch is expensive. The project's solution is single-flight: only the first one fetches, the others wait for its result.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-7"><small><kbd>←</kbd>Previous</small><span>Queues and load shedding</span></a><a class="next" href="#licao-9"><small>Next<kbd>→</kbd></small><span>Metrics and load testing</span></a></nav>
+</article>
+
+<!-- ============================ LESSON 9 ============================ -->
+<article class="view" id="view-licao-9" data-view="licao-9" data-step="9" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lesson 9 of 9</span><span class="tag">15 min</span><span class="tag status">Not read</span></div>
+    <h1>Metrics and load testing</h1>
+    <p class="lede">How to know whether each mechanism works: what to record for each request, why to look at the p99 and how to generate load without fooling yourself.</p>
+  </header>
+
+  <section>
+    <h2>In one sentence</h2>
+    <p><b>Observability</b> is being able to answer questions about the system in production from what it records; <b>load testing</b> is generating controlled traffic to measure how it behaves.</p>
+  </section>
+
+  <section class="why">
+    <h2>When you need it</h2>
+    <dl>
+      <dt>Explaining the bill</dt>
+      <dd>"How much did tenant X spend this month?" only has an answer if every request recorded the tenant, the tokens and the cost.</dd>
+      <dt>Deciding a setting</dt>
+      <dd>"Is 5 failures to open the circuit too many or too few?" only has an answer if you measure the effect.</dd>
+      <dt>Defending the project in an interview</dt>
+      <dd>"The circuit breaker brought the p99 down from 1,270 ms to 118 ms" is worth more than "I implemented a circuit breaker".</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Why it is the usual choice</h2>
+    <p><b>One JSON log line per request</b> (the JSONL format). Each line has everything about that request; any question becomes a filter and a sum. It is the format tools like Datadog, Loki and BigQuery read directly.</p>
+    <p><b>Percentiles, not averages.</b> The average hides the tail: in the hung provider experiment (lesson 6), the median was 104 ms with and without the circuit breaker. Only the p99 showed that 138 requests took over 1 second. A user who uses the product all day hits the p99 several times a day.</p>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <figure class="code"><figcaption>one log line, <code>logs/requests.jsonl</code></figcaption><pre><code>{"ts":"2026-11-18T20:44:21.895Z","id":"gw_eb0a1457","tenant":"acme","upstream":"mock-a","status":200,
+ "ms":704,"stream":false,"inputTokens":20,"outputTokens":10,"costUsd":0.00021,
+ "attempts":[{"upstream":"mock-a","status":200,"ms":704}],"model":"mock-1","queueMs":0}</code></pre></figure>
+    <p>The <code>attempts</code> field keeps every attempt: a request that went through failover shows the provider that failed, the error and the one that answered.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/report.ts">src/report.ts</a>: nearest-rank percentile</figcaption><pre><code>export function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) =&gt; a - b);
+  return sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)]!;
+}</code></pre></figure>
+    <p>In load testing, there are two ways to generate traffic, and they answer different questions:</p>
+    <ul class="plain">
+      <li><b>Fixed concurrency:</b> N clients, each sends the next request when the previous one finishes. It measures maximum throughput. If the system gets slow, the clients send less, and the load drops with it: the test relieves the system exactly when it gets worse.</li>
+      <li><b>Fixed rate:</b> one request every 1/rate seconds, whether the previous one finished or not. That is how real users arrive. It shows the queue growing and latency rising under excess.</li>
+    </ul>
+    <p>The outage and noisy tenant experiments use a fixed rate; the gateway cost and cache experiments use fixed concurrency.</p>
+  </section>
+
+  <section>
+    <h2>The numbers from every lesson</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Mechanism</th><th>Off</th><th>On</th><th>Lesson</th></tr></thead>
+      <tbody>
+        <tr><td>Going through the gateway (p50)</td><td class="num">102.9 ms</td><td class="num">103.9 ms</td><td><a href="#licao-1">1</a></td></tr>
+        <tr><td>First streaming piece (p50)</td><td class="num">202 ms</td><td class="num">203 ms</td><td><a href="#licao-2">2</a></td></tr>
+        <tr><td>Rate limit: neighbor tenant's errors</td><td class="num">75.1%</td><td class="num">0%</td><td><a href="#licao-3">3</a></td></tr>
+        <tr><td>Failover: errors with one provider down</td><td class="num">87.2%</td><td class="num">0%</td><td><a href="#licao-5">5</a></td></tr>
+        <tr><td>Circuit breaker: p99 with a hung provider</td><td class="num">1,270 ms</td><td class="num">118 ms</td><td><a href="#licao-6">6</a></td></tr>
+        <tr><td>Cache: calls to the provider</td><td class="num">1,000</td><td class="num">689</td><td><a href="#licao-8">8</a></td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">All on the same machine (2 cores), with fake providers with fixed latency. The numbers show the effect of each mechanism, not the performance against a real API.</p>
+  </section>
+
+  <section>
+    <h2>Interview question</h2>
+    <p><b>Why can a load test with N fixed clients hide a problem?</b></p>
+    <p>Because each client waits for the response before sending the next one. When the system gets slow, the load drops on its own, and the test never sees the queue grow. Real users do not wait for others to finish before arriving. To measure behavior under excess, the load needs a fixed rate.</p>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-8"><small><kbd>←</kbd>Previous</small><span>Response caching</span></a><a class="next" href="#entrevista"><small>Next<kbd>→</kbd></small><span>Interview questions</span></a></nav>
+</article>
+
+<!-- ============================ INTERVIEW ============================ -->
+<article class="view" id="view-entrevista" data-view="entrevista" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Review</span><span class="tag">10 min</span></div>
+    <h1>Interview questions</h1>
+    <p class="lede">The questions that usually come up about a system like this, with the short answer and the lesson that explains each one.</p>
+  </header>
+
+  <section>
+    <h2>Overall design</h2>
+    <div class="qa">
+      <details><summary>Design a gateway for several LLM APIs.</summary><p>A reverse proxy with these stops, in this order: authentication, cache, per-tenant rate limit, load balancer with circuit breaker, per-provider queue and the call with streaming. Shared state (quota and cache) lives in Redis; the rest, in each copy's memory. One log line per request. Lessons <a href="#licao-1">1</a> and <a href="#licao-9">9</a>.</p></details>
+      <details><summary>How do you scale to several copies of the gateway?</summary><p>The copies sit behind a regular load balancer, with no state of their own that matters between requests. Quota and cache go to Redis, so every copy sees the same balance and the same responses. The circuit breaker and the queue stay per copy, on purpose. Lessons <a href="#licao-3">3</a> and <a href="#licao-6">6</a>.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Limits and queues</h2>
+    <div class="qa">
+      <details><summary>Why rate limit by tokens, and not by requests?</summary><p>The cost of an LLM request varies hundreds of times with the size of the text. The gateway reserves an estimate on the way in and refunds the difference once it knows the real usage. <a href="#licao-3">Lesson 3</a>.</p></details>
+      <details><summary>What happens if Redis goes down?</summary><p>The gateway lets requests through without a limit (fail open), instead of taking every tenant down. If blowing the quota cost more than being down, the choice would be to refuse (fail closed). <a href="#licao-3">Lesson 3</a>.</p></details>
+      <details><summary>How do you make sure two copies don't approve the same balance?</summary><p>Read, compute and write the balance in a Lua script, which Redis runs in full before serving another command. Three separate commands would have a race between the copies. <a href="#licao-3">Lesson 3</a>.</p></details>
+      <details><summary>Why does the queue have a maximum size?</summary><p>By Little's law, the wait is the queue size divided by the throughput. An unbounded queue under sustained excess just makes the wait grow until the client gives up. Better to refuse with <code>503</code> right away. <a href="#licao-7">Lesson 7</a>.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Failures</h2>
+    <div class="qa">
+      <details><summary>Which errors deserve a retry?</summary><p>The provider's: connection failure, timeout, <code>429</code>, <code>529</code> and <code>5xx</code>. The request's (<code>400</code>, <code>401</code>) do not: another provider would give the same answer. <a href="#licao-5">Lesson 5</a>.</p></details>
+      <details><summary>Why jitter in the backoff?</summary><p>So the clients that failed together don't all retry at the same instant and take down the server that is recovering. <a href="#licao-5">Lesson 5</a>.</p></details>
+      <details><summary>Can you switch providers in the middle of a stream?</summary><p>No: the client has already received part of the text, and starting over on another provider would duplicate the answer. After the first byte, a failure becomes an error event in the stream itself. <a href="#licao-5">Lesson 5</a>.</p></details>
+      <details><summary>Why did least-in-flight get worse with a provider down?</summary><p>The down provider returns the error almost instantly, so it hardly ever has a request in progress and always looks like the least busy one. In the experiment, errors went from 33.3% (round-robin) to 87.2%. <a href="#licao-4">Lesson 4</a>.</p></details>
+      <details><summary>Circuit breaker or health check?</summary><p>The circuit breaker uses the requests themselves as the signal and notices the outage at the fifth failure in a row, with no extra traffic; the health check tests a health endpoint every interval. The two can coexist. <a href="#licao-6">Lesson 6</a>.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Performance</h2>
+    <div class="qa">
+      <details><summary>What is backpressure?</summary><p>It is whoever receives more slowly controlling the speed of whoever sends. In the gateway: when <code>res.write()</code> returns <code>false</code>, it stops reading from the provider until the <code>drain</code> event. <a href="#licao-2">Lesson 2</a>.</p></details>
+      <details><summary>Why look at the p99, and not the average?</summary><p>The average hides the tail. With a hung provider, the median stayed at 104 ms with and without the circuit breaker; only the p99 (1,270 ms against 118 ms) showed the problem. <a href="#licao-9">Lesson 9</a>.</p></details>
+      <details><summary>What is a cache stampede?</summary><p>Many requests fetching the same missing value at the same time. The solution is single-flight: only the first one goes to the provider, the others wait for its answer. <a href="#licao-8">Lesson 8</a>.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Further reading</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Lesson</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td class="num">2</td><td><a href="https://platform.claude.com/docs/en/build-with-claude/streaming">Messages API streaming</a></td></tr>
+        <tr><td class="num">2</td><td><a href="https://nodejs.org/learn/modules/backpressuring-in-streams">Node.js: backpressuring in streams</a></td></tr>
+        <tr><td class="num">3</td><td><a href="https://redis.io/docs/latest/develop/use-cases/rate-limiter/nodejs/">Redis: token bucket with Node.js</a></td></tr>
+        <tr><td class="num">5</td><td><a href="https://platform.claude.com/docs/en/api/errors">Messages API errors</a></td></tr>
+        <tr><td class="num">6</td><td><a href="https://martinfowler.com/bliki/CircuitBreaker.html">Martin Fowler: CircuitBreaker</a></td></tr>
+        <tr><td class="num">All</td><td><a href="https://github.com/nicomsz/llm-gateway">The project's code, with tests and experiments</a></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <nav class="pager" aria-label="Previous and next lesson"><a class="prev" href="#licao-9"><small><kbd>←</kbd>Previous</small><span>Metrics and load testing</span></a></nav>
+</article>
+
+<footer class="foot">
+  <span>Code: <a href="https://github.com/nicomsz/llm-gateway">github.com/nicomsz/llm-gateway</a>. By <a href="https://nicomsz.com">Nicolas Moraes de Souza</a>.</span>
+  <button id="reset" type="button">Reset progress</button>
+</footer>
+</main>
+
+<script>
+(function () {
+  var KEY = 'llm-gateway-licoes-v1';
+  var views = Array.prototype.slice.call(document.querySelectorAll('[data-view]'));
+  var order = views.map(function (v) { return v.getAttribute('data-view'); });
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-nav]'));
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type="checkbox"][id]'));
+  var state = {};
+
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var LABEL = { none: 'Not read', partial: 'Reading', done: 'Read' };
+
+  // uma lição conta como lida quando a pessoa rola a página dela até o fim (a navegação "anterior / próxima" entra na tela)
+  var reached = {}, skip = {}, watched = null;
+  var io = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      var view = en.target.closest('[data-view]');
+      var n = view.getAttribute('data-step');
+      if (!n || view.hidden) return;
+      if (!en.isIntersecting) { reached[n] = true; return; }      // o fim estava fora da tela: agora vale rolar até ele
+      if (reached[n] && !skip[n] && !state['seen-' + n]) { state['seen-' + n] = 1; save(); refresh(); }
+    });
+  }) : null;
+  function watch(view) {
+    if (!io) return;
+    if (watched) io.unobserve(watched);
+    watched = null;
+    var n = view.getAttribute('data-step');
+    if (!n) return;
+    reached[n] = false; skip[n] = false;
+    watched = view.querySelector('.pager');
+    io.observe(watched);
+  }
+
+  // linha "Lição lida", com o link para a próxima e o desfazer
+  views.forEach(function (view) {
+    var n = Number(view.getAttribute('data-step'));
+    if (!n) return;
+    var p = document.createElement('p');
+    p.className = 'done-msg';
+    var a = document.createElement('a');
+    a.href = n < 9 ? '#licao-' + (n + 1) : '#entrevista';
+    a.textContent = n < 9 ? 'Go to lesson ' + (n + 1) : 'Review with the interview questions';
+    var undo = document.createElement('button');
+    undo.type = 'button';
+    undo.textContent = 'Mark as not read';
+    undo.addEventListener('click', function () { delete state['seen-' + n]; skip[n] = true; save(); refresh(); });
+    p.appendChild(document.createTextNode('Lesson read.'));
+    p.appendChild(a); p.appendChild(undo);
+    view.insertBefore(p, view.querySelector('.pager'));
+  });
+
+  function stepStatus(view) {
+    if (state['seen-' + view.getAttribute('data-step')]) return 'done';
+    var all = view.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < all.length; i++) if (all[i].checked) return 'partial';
+    return 'none';
+  }
+
+  function refresh() {
+    var doneCount = 0;
+    views.forEach(function (view) {
+      var n = view.getAttribute('data-step');
+      if (!n) return;
+      var s = stepStatus(view);
+      if (s === 'done') doneCount++;
+      view.classList.toggle('is-done', s === 'done');
+      var node = document.querySelector('.route [data-nav="licao-' + n + '"]');
+      node.setAttribute('data-s', s);
+      node.querySelector('.dot').textContent = s === 'done' ? '✓' : n;
+      var row = document.querySelector('[data-idx="' + n + '"]');
+      if (row) row.setAttribute('data-s', s);
+      var pill = view.querySelector('.status');
+      pill.setAttribute('data-s', s);
+      pill.textContent = LABEL[s];
+    });
+    var bar = document.getElementById('loadbar');
+    Array.prototype.forEach.call(bar.children, function (chunk, i) { chunk.className = i < doneCount ? 'on' : ''; });
+    bar.setAttribute('aria-valuenow', doneCount);
+    bar.title = doneCount + ' of 9 lessons read';
+  }
+
+  boxes.forEach(function (box) {
+    box.checked = !!state[box.id];
+    box.addEventListener('change', function () {
+      if (box.checked) state[box.id] = 1; else delete state[box.id];
+      save(); refresh();
+    });
+  });
+
+  // rotas: uma etapa por vez, pelo #hash
+  function current() {
+    var id = (location.hash || '#visao-geral').slice(1);
+    return order.indexOf(id) >= 0 ? id : order[0];
+  }
+  function route(first) {
+    var id = current();
+    views.forEach(function (v) {
+      var on = v.getAttribute('data-view') === id;
+      v.hidden = !on;
+      v.classList.remove('enter');
+      if (on && !first) { void v.offsetWidth; v.classList.add('enter'); }
+    });
+    navLinks.forEach(function (a) {
+      if (a.getAttribute('data-nav') === id) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    if (!first) window.scrollTo(0, 0);
+    watch(views[order.indexOf(id)]);
+  }
+  window.addEventListener('hashchange', function () { route(false); });
+
+  // setas do teclado: etapa anterior e próxima
+  document.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    var t = e.target && e.target.tagName;
+    if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+    var i = order.indexOf(current()) + (e.key === 'ArrowRight' ? 1 : -1);
+    if (i < 0 || i >= order.length) return;
+    location.hash = order[i];
+  });
+
+  // copiar código e termos de busca
+  function copy(text, btn, restore) {
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = restore; }, 1400); };
+    try { navigator.clipboard.writeText(text).then(done, function () { btn.textContent = 'Select and copy'; }); }
+    catch (e) { btn.textContent = 'Select and copy'; }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.code'), function (fig) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'copy'; b.textContent = 'Copy';
+    b.addEventListener('click', function () { copy(fig.querySelector('pre').innerText, b, 'Copy'); });
+    fig.appendChild(b);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (chip) {
+    var term = chip.textContent;
+    chip.title = 'Copy search term';
+    chip.addEventListener('click', function () { copy(term, chip, term); });
+  });
+
+  // zerar progresso, com confirmação em dois cliques
+  var reset = document.getElementById('reset'), armed = false, timer;
+  reset.addEventListener('click', function () {
+    if (!armed) {
+      armed = true; reset.textContent = 'Click again to confirm';
+      timer = setTimeout(function () { armed = false; reset.textContent = 'Reset progress'; }, 4000);
+      return;
+    }
+    clearTimeout(timer); armed = false; reset.textContent = 'Reset progress';
+    state = {}; save();
+    var cur = views[order.indexOf(current())].getAttribute('data-step');
+    if (cur) skip[cur] = true;
+    boxes.forEach(function (b) { b.checked = false; });
+    refresh();
+  });
+
+
+  // ao trocar de idioma, continua na mesma lição
+  Array.prototype.forEach.call(document.querySelectorAll('.lang a'), function (a) {
+    a.addEventListener('click', function () { a.href = a.getAttribute('href').split('#')[0] + location.hash; });
+  });
+
+  refresh(); route(true);
+})();
+</script>
+</body>
+</html>

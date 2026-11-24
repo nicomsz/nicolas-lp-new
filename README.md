@@ -6,7 +6,7 @@ Meu site pessoal: quem sou, a stack com que trabalho, minha trajetória e como f
 
 ## Como é feito
 
-O site inteiro é um arquivo, o `index.html`. Não tem framework nem etapa de build.
+O site inteiro é um arquivo, o `index.html`, e a versão em inglês fica em `en/index.html`. Não tem framework nem etapa de build.
 
 - **3D:** um único canvas WebGL com [Three.js](https://threejs.org), carregado de uma CDN. O aparelho é montado com geometria no próprio código, sem modelo 3D nem imagem.
 - **Animação presa ao scroll:** no celular, a descida do aparelho do topo até a seção da stack usa `animation-timeline: scroll()`. O navegador calcula a animação junto com a rolagem, sem JavaScript a cada quadro. Onde o recurso não existe, o mesmo trajeto roda em JavaScript.
@@ -20,6 +20,11 @@ O site inteiro é um arquivo, o `index.html`. Não tem framework nem etapa de bu
 - [`/volta/`](https://nicomsz.com/volta/): landing page do Volta, lembrete de vacina pelo WhatsApp para clínicas veterinárias.
 
 Cada uma é um `index.html` independente, na própria pasta.
+
+## Idiomas
+
+Todas as páginas existem em português e em inglês. A versão em inglês fica numa subpasta `en/` ao lado da original
+(`/en/`, `/llm-gateway/en/`, `/volta/en/`, `/volta/en/contato/`), e o seletor PT / EN no menu leva para a mesma página na outra língua.
 
 ## Rodar localmente
 

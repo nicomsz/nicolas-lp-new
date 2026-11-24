@@ -13,6 +13,9 @@
 <meta property="og:image:height" content="627">
 <meta property="og:url" content="https://nicomsz.com">
 <meta property="og:type" content="website">
+<link rel="alternate" hreflang="pt-BR" href="https://nicomsz.com/">
+<link rel="alternate" hreflang="en" href="https://nicomsz.com/en/">
+<link rel="alternate" hreflang="x-default" href="https://nicomsz.com/">
 <script>document.documentElement.classList.add("js","pin")</script>
 <style>
 /* Mona Sans, a tipografia da GitHub. Copyright 2022 The Mona Sans Project Authors (https://github.com/github/mona-sans).
@@ -73,17 +76,17 @@ button{font:inherit;color:inherit}
 .nav a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none}
 .nav__mark{font-size:1.125rem;font-weight:750;letter-spacing:-.03em}
 .nav__links{display:flex;align-items:center;gap:2px;margin-right:-14px;font-size:.9375rem;font-weight:550}
-.nav__links a{position:relative;padding:0 14px;border-radius:999px;transition:color .3s,opacity .2s}
-.nav__links a:not(:last-child){display:none}
-@media (min-width:720px){.nav__links a:not(:last-child){display:inline-flex}}
-.nav__links a:last-child::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--accent);opacity:0;transition:opacity .3s}
+.nav__links > a{position:relative;padding:0 14px;border-radius:999px;transition:color .3s,opacity .2s}
+.nav__links > a:not(:last-child){display:none}
+@media (min-width:720px){.nav__links > a:not(:last-child){display:inline-flex}}
+.nav__links > a:last-child::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--accent);opacity:0;transition:opacity .3s}
 .nav.is-stuck .nav__bar,html:not(.js) .nav__bar{color:#fff}
 .nav.is-stuck .nav__bar::before,html:not(.js) .nav__bar::before{opacity:1;transform:none}
 .nav.is-stuck .nav__mark,html:not(.js) .nav__mark{transform:translate3d(calc(var(--shift) + 20px),0,0)}
 .nav.is-stuck .nav__links,html:not(.js) .nav__links{transform:translate3d(calc((var(--shift) + 20px) * -1),0,0)}
-.nav.is-stuck .nav__links a:last-child,html:not(.js) .nav__links a:last-child{color:var(--on-accent)}
-.nav.is-stuck .nav__links a:last-child::before,html:not(.js) .nav__links a:last-child::before{opacity:1}
-@media (hover:hover){.nav__links a:not(:last-child):hover{opacity:.62}}                 /* sem linha nem borda no hover: o link só esmaece */
+.nav.is-stuck .nav__links > a:last-child,html:not(.js) .nav__links > a:last-child{color:var(--on-accent)}
+.nav.is-stuck .nav__links > a:last-child::before,html:not(.js) .nav__links > a:last-child::before{opacity:1}
+@media (hover:hover){.nav__links > a:not(:last-child):hover{opacity:.62}}                 /* sem linha nem borda no hover: o link só esmaece */
 
 /* Controles */
 .btn{display:inline-flex;align-items:center;min-height:48px;padding:0 1.25em;border-radius:999px;font-size:1rem;font-weight:600;white-space:nowrap;text-decoration:none;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 26%,transparent);transition:box-shadow .25s,transform .25s var(--ease)}
@@ -422,7 +425,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
 }
-</style>
+/* seletor de idioma */.lang{display:flex;align-items:center;margin:0 4px 0 2px;font-size:.8125rem;font-weight:650;letter-spacing:.03em}.lang a{justify-content:center;min-width:30px;padding:0 3px;opacity:.48;transition:opacity .2s}.lang a[aria-current]{opacity:1;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px}@media (hover:hover){.lang a:not([aria-current]):hover{opacity:.8}}.lang i{width:1px;height:12px;background:currentColor;opacity:.3}@media (min-width:720px){.lang{margin:0 6px 0 8px}}/* fim do seletor */</style>
 </head>
 <body>
 <a class="skip" href="#conteudo">Pular para o conteúdo</a>
@@ -442,6 +445,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
       <a href="#stack">Stack</a>
       <a href="#projetos">Projetos</a>
       <a href="#trajetoria">Trajetória</a>
+      <nav class="lang" aria-label="Idioma"><a href="/" lang="pt-BR" aria-current="true">PT</a><i aria-hidden="true"></i><a href="/en/" lang="en" hreflang="en">EN</a></nav>
       <a href="#contato">Contato</a>
     </nav>
   </div>
@@ -583,14 +587,14 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
         <h2 class="h2">Projetos</h2>
         <ul class="work">
           <li class="work__item">
-            <a class="work__shot" href="/llm-gateway/" tabindex="-1" aria-hidden="true"><img src="projetos/llm-gateway.webp?v=88e34642" alt="" width="1280" height="800" loading="lazy" decoding="async"></a>
+            <a class="work__shot" href="/llm-gateway/" tabindex="-1" aria-hidden="true"><img src="projetos/llm-gateway.webp?v=ac67328e" alt="" width="1280" height="800" loading="lazy" decoding="async"></a>
             <span class="label">Página de estudo de system design</span>
             <h3 class="work__t">System design com LLM</h3>
             <p class="work__d">Uma página que ensina, em 9 lições curtas, os conceitos de arquitetura de um produto que usa IA em produção: rate limit, streaming, failover, circuit breaker, fila e cache. Cada lição mostra o trecho de código e o número medido num gateway de LLM de código aberto.</p>
             <p class="work__links"><a href="/llm-gateway/">Ler as 9 lições <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a><a href="https://github.com/nicomsz/llm-gateway">Ver o código <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
           </li>
           <li class="work__item">
-            <a class="work__shot" href="/volta/" tabindex="-1" aria-hidden="true"><img src="projetos/volta.webp?v=5cb80c31" alt="" width="1280" height="800" loading="lazy" decoding="async"></a>
+            <a class="work__shot" href="/volta/" tabindex="-1" aria-hidden="true"><img src="projetos/volta.webp?v=2753f475" alt="" width="1280" height="800" loading="lazy" decoding="async"></a>
             <span class="label">Landing page de produto</span>
             <h3 class="work__t">Volta</h3>
             <p class="work__d">Página de um produto para clínicas veterinárias: o tutor recebe o lembrete da vacina no WhatsApp da clínica. A conversa se monta conforme a rolagem, e o painel de lembretes tem filtros que funcionam.</p>
@@ -619,9 +623,9 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
               </div>
               <figure class="klubs__fig">
                 <div class="klubs__shots" tabindex="0" role="group" aria-label="Telas do app Devs">
-                  <img src="trajetoria/klubs-inicio.webp?v=e06524dd" alt="Tela inicial do app Devs: aula ao vivo em destaque e os próximos eventos." width="480" height="1041" loading="lazy" decoding="async">
-                  <img src="trajetoria/klubs-eventos.webp?v=f990ce52" alt="Lista de eventos do app Devs, com o evento ao vivo em destaque." width="480" height="1041" loading="lazy" decoding="async">
-                  <img src="trajetoria/klubs-evento.webp?v=312be156" alt="Página de um evento semanal, com a contagem até o início e o botão de participar." width="480" height="1041" loading="lazy" decoding="async">
+                  <img src="trajetoria/klubs-inicio.webp?v=a818a756" alt="Tela inicial do app Devs: aula ao vivo em destaque e os próximos eventos." width="480" height="1041" loading="lazy" decoding="async">
+                  <img src="trajetoria/klubs-eventos.webp?v=278704ed" alt="Lista de eventos do app Devs, com o evento ao vivo em destaque." width="480" height="1041" loading="lazy" decoding="async">
+                  <img src="trajetoria/klubs-evento.webp?v=14a37fde" alt="Página de um evento semanal, com a contagem até o início e o botão de participar." width="480" height="1041" loading="lazy" decoding="async">
                 </div>
                 <figcaption class="label">App Devs, um dos apps da Klubs.</figcaption>
               </figure>
@@ -658,7 +662,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
         <span class="big">o seu.</span>
       </h2>
 
-      <p class="lede contact__lede">Aberto a projetos, times e boas conversas.<br><a class="contact__mail" href="mailto:nicolasmdesouza@gmail.com">nicolasmdesouza@gmail.com</a></p>
+      <p class="lede contact__lede">Aberto a projetos, times e boas conversas.<br><a class="contact__mail" href="mailto:nicolasmdesouza@gmail.com">nicolasmdesouza<wbr>@gmail.com</a></p>
 
       <ul class="links">
         <li><a href="https://www.linkedin.com/in/nicolasmsouza">LinkedIn <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></li>
@@ -1696,5 +1700,9 @@ measure();
 requestAnimationFrame(now => { last = now; requestAnimationFrame(frame); });
 initGL().then(api => { gl = api; if (gl) measure(); });
 </script>
+
+
+
+<script>/* idioma */document.querySelectorAll(".lang a:not([aria-current])").forEach(a=>a.addEventListener("click",()=>{a.href=a.getAttribute("href")+location.hash}))</script>
 </body>
 </html>

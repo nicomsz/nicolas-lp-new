@@ -212,6 +212,11 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
   /* a linha verde acompanha o scroll pela timeline do navegador, fora da thread principal */
   .anim .thread::after{display:block;animation:grow linear both;animation-timeline:view(block 0% 24%);animation-range:entry-crossing 0% entry-crossing 100%}
 }
+
+/* seletor de idioma */
+.lang{display:flex;align-items:center;gap:2px;padding:3px;margin-right:2px;border-radius:999px;background:var(--paper)}
+.lang a{display:grid;place-items:center;min-width:34px;height:32px;padding:0 8px;border-radius:999px;font-size:.8rem;font-weight:600;letter-spacing:.02em;color:var(--ink-3);text-decoration:none}
+.lang a[aria-current="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(13,43,42,.18)}
 </style>
 </head>
 <body>
@@ -236,6 +241,7 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
       <a href="#painel">Painel</a>
       <a href="#duvidas">Dúvidas</a>
     </nav>
+    <nav class="lang" aria-label="Idioma"><a href="./" lang="pt-BR" aria-current="true">PT</a><a href="en/" lang="en" hreflang="en">EN</a></nav>
     <a class="btn sm" data-contact href="contato/">Falar com a gente</a>
   </div>
 </header>

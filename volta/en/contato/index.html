@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Volta: I want it at my clinic</title>
+<meta name="description" content="Leave your vet clinic's contact to start using Volta.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M14 4h20a12 12 0 0 1 12 12v14a12 12 0 0 1-12 12H19l-9.4 5.2a1.6 1.6 0 0 1-2.4-1.5L8 38.6A12 12 0 0 1 2 28V16A12 12 0 0 1 14 4z' fill='%2312a05c'/%3E%3Cpath d='M32.5 23a8.5 8.5 0 1 1-3-6.5' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M30.3 11.4v5.9h-5.9' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,400..700&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#ffffff;
+  --paper:#f3f8f5;
+  --ink:#0d2b2a;
+  --ink-2:#47605e;
+  --ink-3:#5a7270;
+  --line:#dde8e3;
+  --field:#c9d8d2;
+  --green:#12a05c;
+  --green-deep:#0b7d47;
+  --green-soft:#ddf3e7;
+  --blue:#1f6fe5;
+  --red:#b42318;
+  --sans:"Google Sans Flex",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip}
+h1,h2,p{margin:0}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.wrap{max-width:1180px;margin-inline:auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+@media (min-width:720px){.wrap{padding-left:max(32px,env(safe-area-inset-left,0px));padding-right:max(32px,env(safe-area-inset-right,0px))}}
+
+.nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:50;padding-block:8px;pointer-events:none}
+.nav-pill{pointer-events:auto;display:flex;align-items:center;gap:6px;width:fit-content;margin-inline:auto;padding:6px 6px 6px 16px;border-radius:999px;background:rgba(255,255,255,.86);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);border:1px solid var(--line);box-shadow:0 12px 32px -22px rgba(13,43,42,.5)}
+.brand{display:flex;align-items:center;gap:8px;margin-right:6px;font-size:1.3rem;font-weight:600;letter-spacing:-.015em;line-height:1;text-decoration:none}
+.brand svg{width:26px;height:26px}
+.back{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;font-size:.95rem;font-weight:500;color:var(--ink-2);text-decoration:none}
+.back:hover{background:var(--paper);color:var(--ink)}
+
+main{position:relative;padding-block:clamp(32px,6vw,80px) clamp(64px,8vw,112px)}
+main::before{content:"";position:absolute;inset:-120px 0 auto;height:520px;z-index:-1;background:radial-gradient(55% 60% at 80% 20%,var(--green-soft),transparent 70%)}
+.grid{display:grid;gap:40px;align-items:start}
+@media (min-width:960px){.grid{grid-template-columns:.9fr 1.1fr;gap:72px}}
+h1{font-weight:520;font-size:clamp(2.3rem,5.6vw,4rem);line-height:1.04;letter-spacing:-.028em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--green-deep)}
+.lede{margin-top:20px;max-width:28em;font-size:clamp(1.1rem,1.5vw,1.2rem);color:var(--ink-2);text-wrap:pretty}
+.next{display:grid;gap:14px;margin:32px 0 0;padding:0;list-style:none;counter-reset:n}
+.next li{display:grid;grid-template-columns:32px minmax(0,1fr);gap:14px;align-items:start;color:var(--ink-2);counter-increment:n}
+.next li::before{content:counter(n);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#fff;border:1.5px solid var(--line);font-size:.9rem;font-weight:700;color:var(--ink)}
+.next b{color:var(--ink);font-weight:600}
+
+/* Formulário */
+.card{padding:clamp(22px,4vw,40px);border:1px solid var(--line);border-radius:28px;background:#fff;box-shadow:0 40px 80px -60px rgba(13,43,42,.55)}
+form{display:grid;gap:20px}
+.row2{display:grid;gap:20px}
+@media (min-width:620px){.row2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.field{display:grid;gap:8px}
+label,.legend{font-size:.95rem;font-weight:600}
+.opt{font-weight:400;color:var(--ink-3)}
+input,select,textarea{width:100%;min-height:52px;padding:12px 14px;border:1.5px solid var(--field);border-radius:14px;background:#fff;color:var(--ink);font:400 1.05rem/1.4 var(--sans);transition:border-color .15s,box-shadow .15s}
+textarea{min-height:104px;resize:vertical}
+input:hover,select:hover,textarea:hover{border-color:var(--ink-3)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green-deep);box-shadow:0 0 0 4px var(--green-soft)}
+input[aria-invalid="true"]{border-color:var(--red)}
+.err{margin-top:-2px;font-size:.88rem;color:var(--red)}
+.err:empty{display:none}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 26px;border-radius:999px;border:0;background:var(--green-deep);color:#fff;font:600 1.05rem/1 var(--sans);cursor:pointer;transition:background .2s,transform .2s}
+.btn:hover{background:#086538}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.6;cursor:progress}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
+.fine{font-size:.88rem;color:var(--ink-3)}
+.status{font-size:.95rem}
+.status.bad{color:var(--red)}
+.done{display:grid;gap:14px;justify-items:start}
+.done .tick{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--green-soft);color:var(--green-deep)}
+.done .tick svg{width:26px;height:26px}
+.done h2{font-weight:520;font-size:clamp(1.7rem,3vw,2.2rem);line-height:1.1;letter-spacing:-.02em}
+.done p{color:var(--ink-2)}
+[hidden]{display:none!important}
+
+.legal{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;padding-block:24px 28px;font-size:.88rem;color:var(--ink-3)}
+.legal a{text-underline-offset:3px}
+
+/* seletor de idioma */
+.lang{display:flex;align-items:center;gap:2px;padding:3px;margin-right:2px;border-radius:999px;background:var(--paper)}
+.lang a{display:grid;place-items:center;min-width:34px;height:32px;padding:0 8px;border-radius:999px;font-size:.8rem;font-weight:600;letter-spacing:.02em;color:var(--ink-3);text-decoration:none}
+.lang a[aria-current="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(13,43,42,.18)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="mark" viewBox="0 0 48 48">
+    <path d="M14 4h20a12 12 0 0 1 12 12v14a12 12 0 0 1-12 12H19l-9.4 5.2a1.6 1.6 0 0 1-2.4-1.5L8 38.6A12 12 0 0 1 2 28V16A12 12 0 0 1 14 4z" fill="#12a05c"/>
+    <path d="M32.5 23a8.5 8.5 0 1 1-3-6.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M30.3 11.4v5.9h-5.9" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
+<header class="nav">
+  <div class="nav-pill">
+    <a class="brand" href="../" aria-label="Volta, back to the home page"><svg aria-hidden="true"><use href="#mark"/></svg>Volta</a>
+    <nav class="lang" aria-label="Language"><a href="../../contato/" lang="pt-BR" hreflang="pt-BR">PT</a><a href="./" lang="en" aria-current="true">EN</a></nav>
+    <a class="back" href="../">Back to the page</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap grid">
+    <div>
+      <h1>I want Volta at <em>my clinic</em></h1>
+      <p class="lede">Leave the clinic's contact. We will reach out on WhatsApp to understand how you work today.</p>
+      <ol class="next">
+        <li><span><b>You send this form.</b> It takes a minute.</span></li>
+        <li><span><b>We message you on WhatsApp</b> at the number you leave.</span></li>
+        <li><span><b>We go over the list of vaccines already given,</b> and the reminders get scheduled.</span></li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <form id="form" novalidate>
+        <div class="row2">
+          <div class="field">
+            <label for="nome">Your name</label>
+            <input id="nome" name="nome" autocomplete="name" required aria-describedby="nome-err">
+            <p class="err" id="nome-err" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="clinica">Clinic name</label>
+            <input id="clinica" name="clinica" autocomplete="organization" required aria-describedby="clinica-err">
+            <p class="err" id="clinica-err" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="whatsapp">WhatsApp, with area code</label>
+            <input id="whatsapp" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(47) 99999-9999" required aria-describedby="whatsapp-err">
+            <p class="err" id="whatsapp-err" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="cidade">City</label>
+            <input id="cidade" name="cidade" autocomplete="address-level2" required aria-describedby="cidade-err">
+            <p class="err" id="cidade-err" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="hoje">How do you remind pet owners today? <span class="opt">(optional)</span></label>
+          <select id="hoje" name="como_lembram_hoje">
+            <option value="">Choose an option</option>
+            <option>We don't</option>
+            <option>We message them by hand on WhatsApp</option>
+            <option>Through the clinic's system</option>
+            <option>Some other way</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="msg">Anything else you want to tell us? <span class="opt">(optional)</span></label>
+          <textarea id="msg" name="mensagem"></textarea>
+        </div>
+        <div class="hp" aria-hidden="true">
+          <label for="site">Leave blank</label>
+          <input id="site" name="_honey" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="actions">
+          <button class="btn" type="submit" id="send">Send</button>
+          <p class="status" id="status" role="status"></p>
+        </div>
+        <p class="fine">Your details are only used to reply to this contact.</p>
+      </form>
+
+      <div class="done" id="done" hidden tabindex="-1">
+        <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <h2>Received.</h2>
+        <p>We will message you on WhatsApp at <b id="done-num"></b> soon.</p>
+        <a href="../">Back to the Volta page</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="wrap legal">
+  <span>Volta, 2026. A project by <a href="https://nicomsz.com/en/">Nicolas Moraes de Souza</a>.</span>
+  <span>WhatsApp is a registered trademark of Meta.</span>
+</footer>
+
+<script>
+(function(){
+  // As respostas chegam por e-mail, pelo FormSubmit (formsubmit.co). Na primeira vez, ele manda um e-mail
+  // pedindo para confirmar o endereço; depois de confirmado, cada envio chega na caixa de entrada.
+  var ENDPOINT='https://formsubmit.co/ajax/nicolasmdesouza@gmail.com';
+  var EMAIL='nicolasmdesouza@gmail.com';
+  var form=document.getElementById('form'), send=document.getElementById('send'), status=document.getElementById('status');
+
+  var rules={
+    nome:function(v){return v?'':'Enter your name.'},
+    clinica:function(v){return v?'':'Enter the clinic\'s name.'},
+    cidade:function(v){return v?'':'Enter the city.'},
+    whatsapp:function(v){var d=v.replace(/\D/g,'');return d.length>=10&&d.length<=13?'':'Enter the number with the area code, for example (47) 99999-9999.'}
+  };
+  function check(id){
+    var el=document.getElementById(id), msg=rules[id](el.value.trim());
+    document.getElementById(id+'-err').textContent=msg;
+    el.setAttribute('aria-invalid',msg?'true':'false');
+    return !msg;
+  }
+  Object.keys(rules).forEach(function(id){
+    document.getElementById(id).addEventListener('blur',function(){if(this.value)check(id)});
+  });
+
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var bad=Object.keys(rules).filter(function(id){return !check(id)});
+    if(bad.length){document.getElementById(bad[0]).focus();return}
+    if(form._honey.value)return; // robô
+
+    var data={};
+    new FormData(form).forEach(function(v,k){if(k!=='_honey')data[k]=String(v).trim()});
+    data._subject='Volta (EN): contato de '+data.clinica+' ('+data.cidade+')';
+    data._template='table';
+
+    send.disabled=true; send.textContent='Sending…'; status.className='status'; status.textContent='';
+    fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(data)})
+      .then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {ok:r.ok,j:j}})})
+      .then(function(res){
+        if(!res.ok||String(res.j.success)!=='true')throw new Error(res.j.message||'falhou');
+        document.getElementById('done-num').textContent=data.whatsapp;
+        form.hidden=true;
+        var done=document.getElementById('done'); done.hidden=false; done.focus();
+      })
+      .catch(function(){
+        send.disabled=false; send.textContent='Send';
+        status.className='status bad';
+        status.innerHTML='It could not be sent right now. Try again or write to <a href="mailto:'+EMAIL+'">'+EMAIL+'</a>.';
+      });
+  });
+})();
+</script>
+</body>
+</html>
