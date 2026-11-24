@@ -214,10 +214,19 @@ html:not(.pin) .step{grid-area:auto;min-height:0;padding-bottom:22px}
 .demo.is-on{visibility:visible}
 .demo__fit{position:relative;left:var(--ox,0px);top:var(--oy,0px);display:grid;row-gap:10px;width:var(--bw,calc(328px * var(--k,1)))}
 /* Cronômetro da abertura, em cima do quadro. Tamanho fixo e contido: o texto muda dez vezes por segundo sem refazer o layout de fora. */
-.demo__clock{height:1.3em;contain:strict;font-size:.8125rem;font-weight:650;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink);opacity:0;transition:opacity .35s}
+.demo__clock{display:flex;align-items:center;gap:.5em;height:1.6em;contain:strict;font-size:.8125rem;font-weight:650;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink);opacity:0;transition:opacity .35s}
+/* Lento x rápido: X vermelho enquanto a tela demora 3 s, visto verde quando ela abre na hora.
+   O mesmo sinal aparece no relógio, no contorno da tela e no título da legenda; nunca só a cor, sempre o ícone junto. */
+.demo,.stage{--bad:#ff4d4f;--good:#2fcf72}
+.verdict{flex:none;width:1.45em;height:1.45em;border-radius:50%;background:var(--bad) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7 7 17'/%3E%3C/svg%3E") center/66% no-repeat;transition:background-color .3s}
+.demo.is-fast .verdict{background-color:var(--good);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.2 4.2L18.5 7.5'/%3E%3C/svg%3E")}
+.demo.is-live .demo__box{outline-color:var(--bad)}
+.demo.is-live.is-fast .demo__box{outline-color:var(--good)}
+.cap__t::before{content:"";display:inline-block;width:.72em;height:.72em;margin-right:.24em;vertical-align:-.04em;border-radius:50%;background:var(--bad) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7 7 17'/%3E%3C/svg%3E") center/62% no-repeat}
+.stage.is-fast .cap__t::before{background-color:var(--good);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 12.5l4.2 4.2L18.5 7.5'/%3E%3C/svg%3E")}
 .demo.is-live .demo__clock{opacity:1}
 /* A caixa mede px inteiros e é ela que recorta; o quadro de dentro é desenhado em px de projeto e escalado (sobra 1 px embaixo, cortado). */
-.demo__box{position:relative;isolation:isolate;width:var(--bw,calc(328px * var(--k,1)));height:var(--bh,calc(340px * var(--k,1)));border-radius:calc(28px * var(--k,1));overflow:hidden}
+.demo__box{position:relative;isolation:isolate;width:var(--bw,calc(328px * var(--k,1)));height:var(--bh,calc(340px * var(--k,1)));border-radius:calc(28px * var(--k,1));overflow:hidden;outline:3px solid transparent;outline-offset:4px;transition:outline-color .3s}
 .demo__frame{position:relative;width:328px;height:calc(var(--bh,calc(340px * var(--k,1))) / var(--k,1) + 1px);background:#fff;transform:scale(var(--k,1));transform-origin:0 0}
 
 /* A tela: cabeçalho, o próximo encontro em destaque e um item de lista */
@@ -483,7 +492,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
           </div>
           <div class="demo is-load" data-demo>
             <div class="demo__fit" data-fit>
-              <p class="demo__clock" data-load-clock aria-hidden="true">Abrindo… 0,0 s</p>
+              <p class="demo__clock" aria-hidden="true"><span class="verdict"></span><span data-load-clock>Abrindo… 0,0 s</span></p>
               <div class="demo__box" data-box>
                 <div class="demo__frame" data-frame role="img" aria-label="Tela de exemplo de um app. Primeiro ela leva 3 segundos para abrir. Depois a mesma tela abre em menos de um segundo, mostrando o que já estava guardado no aparelho.">
                   <div class="scr">
@@ -748,6 +757,7 @@ const secs = ms => (ms / 1000).toFixed(1).replace(".", ",") + " s";
 function setMode(m, now) {
   ld.mode = m; ld.t0 = now; ld.phase = -1; ld.tenth = -1;
   demo.root.classList.toggle("is-fast", m === 1);
+  el.stage.classList.toggle("is-fast", m === 1);
   if (m >= 0) setCaption(CAPS[m][0], CAPS[m][1], true);
   runLoad(now);
 }
@@ -928,6 +938,7 @@ function noGL() {
   el.step.forEach(li => li.classList.add("is-on"));
   el.stage.classList.add("is-cap");                            // sem trilha, a tela fica à mostra, já aberta
   demo.root.classList.add("is-on", "is-live", "is-fast"); demo.root.classList.remove("is-load");
+  el.stage.classList.add("is-fast"); for (const n of demo.capT) n.textContent = CAPS[1][0];
   setText(demo.clock, "Abriu em 0,3 s"); setText(demo.count, "13");
   for (const n of demo.capD) n.innerHTML = `No celular, 53% das visitas são abandonadas quando a página demora mais de 3 segundos para abrir (<a href="${SOURCE}" target="_blank" rel="noopener">Google, 2016</a>). Esta tela abre em menos de um: mostra o que já está guardado no aparelho e busca a atualização por trás.`;
   measure();
