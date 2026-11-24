@@ -299,11 +299,22 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 .about__lead{max-width:30em;font-size:clamp(1.25rem,1.9vw,1.625rem);line-height:1.4;font-weight:500;letter-spacing:-.01em;text-wrap:pretty}
 .about__more{max-width:36em;font-size:clamp(1.0625rem,1.3vw,1.25rem);line-height:1.5;color:var(--mute);text-wrap:pretty}
 .trail{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:20px;border-bottom:1px solid var(--line)}
-.trail li{display:grid;grid-template-columns:subgrid;grid-column:1/-1;row-gap:2px;align-items:start;padding:16px 0;border-top:1px solid var(--line)}
+.trail > li{display:grid;grid-template-columns:subgrid;grid-column:1/-1;row-gap:2px;align-items:start;padding:16px 0;border-top:1px solid var(--line)}
 .trail__when{grid-row:1/4;width:min-content;padding-top:.55em}
 .trail__where{grid-column:2;font-size:1.5rem;font-weight:750;line-height:1.15;letter-spacing:-.03em;white-space:nowrap}
 .trail__what{grid-column:2;font-weight:560}
 .trail__how{grid-column:2;font-size:.9375rem;color:var(--mute)}
+/* Klubs: o número de apps, as duas lojas e telas de um dos apps */
+.klubs{grid-column:2;display:grid;row-gap:18px;margin-top:14px}
+.klubs__stat{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.klubs__stat b{font-family:var(--font-display);font-size:clamp(3.25rem,6vw,4.75rem);font-weight:800;line-height:.9;letter-spacing:-.05em}
+.klubs__stat span{font-size:1.0625rem;font-weight:650}
+.klubs__stores{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.klubs__stores li{display:inline-flex;align-items:center;gap:6px;padding:7px 13px 7px 10px;border-radius:999px;background:var(--ink);color:var(--paper);font-size:.875rem;font-weight:650;line-height:1}
+.klubs__stores .i{font-size:1em;stroke-width:2.6}
+.klubs__fig{margin:0;display:grid;row-gap:8px;min-width:0}
+.klubs__shots{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 10px;scrollbar-width:thin}
+.klubs__shots img{flex:none;width:clamp(128px,13vw,172px);height:auto;scroll-snap-align:start;border:5px solid #121318;border-radius:clamp(20px,2vw,26px);background:#121318;box-shadow:0 24px 40px -28px rgb(0 0 0 / .55)}
 /* Projetos: um item por projeto, com o que é, a prova e os links */
 .work{display:grid;border-bottom:1px solid var(--line)}
 .work__item{display:grid;align-content:start;row-gap:10px;padding:22px 0 26px;border-top:1px solid var(--line)}
@@ -385,9 +396,11 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
   .demo__cap .cap__d{font-size:1rem}
 
   .trail{grid-template-columns:10rem minmax(9rem,.9fr) minmax(12rem,1.1fr) minmax(0,1.8fr);column-gap:24px}
-  .trail li{align-items:baseline;padding:22px 0}
+  .trail > li{align-items:baseline;padding:22px 0}
   .trail__when{grid-row:auto;width:auto;padding-top:0;white-space:nowrap}
   .trail__where,.trail__what,.trail__how{grid-column:auto}
+  .klubs{grid-column:2/-1;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:40px;margin-top:22px}
+  .klubs__shots{overflow:visible;padding-bottom:0}
   .trail__where{font-size:2rem}
   .tools{grid-template-columns:repeat(4,minmax(0,1fr))}
   .work{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:48px;border-bottom:0}
@@ -595,7 +608,24 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
       <div class="block" id="trajetoria">
         <h2 class="h2">Trajetória</h2>
         <ol class="trail">
-          <li><span class="trail__when label">fev&nbsp;2026&nbsp;– hoje</span><strong class="trail__where">Klubs</strong><span class="trail__what">Desenvolvedor mobile</span><span class="trail__how">15+ apps white-label para iOS e Android, em React Native (Expo) e TypeScript. Publico nas lojas e cuido de CI/CD e das atualizações OTA.</span></li>
+          <li><span class="trail__when label">fev&nbsp;2026&nbsp;– hoje</span><strong class="trail__where">Klubs</strong><span class="trail__what">Desenvolvedor mobile</span><span class="trail__how">Apps white-label para iOS e Android, em React Native (Expo) e TypeScript. Publico nas lojas e cuido de CI/CD e das atualizações OTA.</span>
+            <div class="klubs">
+              <div class="klubs__facts">
+                <p class="klubs__stat"><b>20+</b><span>apps em produção</span></p>
+                <ul class="klubs__stores" aria-label="Publicados nas duas lojas">
+                  <li><svg class="i" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7.5"/></svg>App Store</li>
+                  <li><svg class="i" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7.5"/></svg>Google Play</li>
+                </ul>
+              </div>
+              <figure class="klubs__fig">
+                <div class="klubs__shots" tabindex="0" role="group" aria-label="Telas do app Devs">
+                  <img src="trajetoria/klubs-inicio.webp" alt="Tela inicial do app Devs: aula ao vivo em destaque e os próximos eventos." width="480" height="1041" loading="lazy" decoding="async">
+                  <img src="trajetoria/klubs-eventos.webp" alt="Lista de eventos do app Devs, com o evento ao vivo em destaque." width="480" height="1041" loading="lazy" decoding="async">
+                  <img src="trajetoria/klubs-evento.webp" alt="Página de um evento semanal, com a contagem até o início e o botão de participar." width="480" height="1041" loading="lazy" decoding="async">
+                </div>
+                <figcaption class="label">App Devs, um dos apps da Klubs.</figcaption>
+              </figure>
+            </div></li>
           <li><span class="trail__when label">set&nbsp;2025&nbsp;– jan&nbsp;2026</span><strong class="trail__where">Stealth</strong><span class="trail__what">Desenvolvedor full stack</span><span class="trail__how">Produto com mais de 2.000 usuários ativos por dia. Front-end em Next.js e React, APIs e serviços em Node.js e Python.</span></li>
           <li><span class="trail__when label">fev&nbsp;2025&nbsp;– set&nbsp;2025</span><strong class="trail__where">DOOOR</strong><span class="trail__what">Desenvolvedor full stack</span><span class="trail__how">Liderança do front-end em um time de 3 desenvolvedores, com React e Next.js. Produtos Web3 com conexão de carteira e contratos inteligentes.</span></li>
           <li><span class="trail__when label">out&nbsp;2023&nbsp;– fev&nbsp;2025</span><strong class="trail__where">Scalable</strong><span class="trail__what">Desenvolvedor full stack</span><span class="trail__how">Plataforma financeira de crédito e pagamentos. A maior parte do trabalho no back-end, com NestJS, TypeScript e Prisma.</span></li>
