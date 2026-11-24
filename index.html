@@ -294,6 +294,15 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 .trail__where{grid-column:2;font-size:1.5rem;font-weight:750;line-height:1.15;letter-spacing:-.03em;white-space:nowrap}
 .trail__what{grid-column:2;font-weight:560}
 .trail__how{grid-column:2;font-size:.9375rem;color:var(--mute)}
+/* Projetos: um item por projeto, com o que é, a prova e os links */
+.work{display:grid;border-bottom:1px solid var(--line)}
+.work__item{display:grid;align-content:start;row-gap:10px;padding:22px 0 26px;border-top:1px solid var(--line)}
+.work__t{font-size:1.5rem;font-weight:750;line-height:1.15;letter-spacing:-.03em}
+.work__d{max-width:34em;font-size:1rem;line-height:1.5;color:var(--mute);text-wrap:pretty}
+.work__links{display:flex;flex-wrap:wrap;gap:10px 24px;margin-top:4px}
+.work__links a{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-weight:650;text-decoration:none}
+.work__links .i{font-size:.85em;transition:transform .35s var(--ease)}
+@media (hover:hover){.work__links a:hover{text-decoration:underline;text-underline-offset:4px}.work__links a:hover .i{transform:translate(3px,-3px)}}
 .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 20px;padding-top:20px;border-top:1px solid var(--line)}
 .tools dt{margin-bottom:8px}
 .tools dd{font-size:1.0625rem;font-weight:600;line-height:1.5}
@@ -369,6 +378,9 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
   .trail__where,.trail__what,.trail__how{grid-column:auto}
   .trail__where{font-size:2rem}
   .tools{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .work{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:48px;border-bottom:0}
+  .work__item{border-bottom:1px solid var(--line)}
+  .work__t{font-size:2rem}
 
   .contact__in{grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto auto auto 1fr;column-gap:24px;row-gap:28px;padding-top:120px;padding-bottom:28px}
   .contact__title{grid-column:1/9;grid-row:1}
@@ -403,6 +415,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
         <span class="sr" data-brand-name>Brasa</span>
       </button>
       <a href="#stack">Stack</a>
+      <a href="#projetos">Projetos</a>
       <a href="#trajetoria">Trajetória</a>
       <a href="#contato">Contato</a>
     </nav>
@@ -543,6 +556,24 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 
   <section class="sheet about">
     <div class="in about__in">
+      <div class="block" id="projetos">
+        <h2 class="h2">Projetos</h2>
+        <ul class="work">
+          <li class="work__item">
+            <span class="label">System design, Node.js, TypeScript e Redis</span>
+            <h3 class="work__t">Gateway de LLM</h3>
+            <p class="work__d">Um servidor entre os apps e as APIs de modelos de IA: rate limit por tokens, streaming com cancelamento, failover entre provedores, circuit breaker e cache. Cada mecanismo é medido ligado e desligado; com um provedor travado, o circuit breaker baixou o p99 de 1.270 ms para 118 ms.</p>
+            <p class="work__links"><a href="https://guia-do-gateway-de-llm.vercel.app/">Guia com 9 lições <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a><a href="https://github.com/nicomsz/llm-gateway">Código no GitHub <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
+          </li>
+          <li class="work__item">
+            <span class="label">Landing page de produto</span>
+            <h3 class="work__t">Volta</h3>
+            <p class="work__d">Página de um produto para clínicas veterinárias: o tutor recebe o lembrete da vacina no WhatsApp da clínica. A conversa se monta conforme a rolagem, e o painel de lembretes tem filtros que funcionam.</p>
+            <p class="work__links"><a href="https://volta-vet.vercel.app/">Ver a página <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
+          </li>
+        </ul>
+      </div>
+
       <div class="block">
         <h2 class="h2">Sobre mim</h2>
         <p class="about__lead" data-manifesto>Gosto de entender como um produto funciona como um todo, não apenas de implementar funcionalidades isoladas. Me envolvo desde a concepção e experiência do usuário até a arquitetura, desenvolvimento e publicação, transitando entre front-end e back-end conforme o que o produto precisa.</p>
