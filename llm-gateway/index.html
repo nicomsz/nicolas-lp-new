@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System design com um gateway de LLM</title>
+<meta name="description" content="Os conceitos de system design que aparecem quando um produto usa LLM em produção, explicados com o código e os números de um gateway de LLM open source.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&amp;family=Instrument+Sans:ital,wdth,wght@0,75..100,400..700;1,75..100,400..700&amp;display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: uma barra no topo traz a rota das 9 etapas; abaixo, uma etapa por vez, com o rótulo da seção
+     à esquerda e o conteúdo à direita. Tema único, claro: página branca, e o cinza clássico do Windows
+     na barra e nos controles, com o relevo de 1px (luz em cima e à esquerda, sombra embaixo e à direita). */
+  color-scheme: light;
+  --bg: #ffffff;
+  --face: #d4d0c8;      /* cinza clássico: barra, botões, teclas */
+  --surface: #eceae4;   /* cinza claro: blocos de código */
+  --hi: #ffffff;        /* luz do relevo */
+  --shadow: #808080;    /* sombra do relevo */
+  --dark: #404040;      /* sombra externa do relevo */
+  --ink: #111111;
+  --muted: #5f5e58;
+  --line: #dcd9d0;
+  --line-strong: #aca899;
+  --accent: #0a246a;    /* azul de seleção */
+  --on-ink: #ffffff;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-sans); font-size: 16px; line-height: 1.65;
+  -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+p, h1, h2, figure { margin: 0; }
+code, pre, kbd { font-family: var(--font-mono); }
+code { font-size: 0.86em; background: var(--surface); padding: 1.5px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+
+/* barra do topo: a rota das etapas, em cinza clássico com relevo */
+.bar {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 28px;
+  min-height: 52px; padding: 0 24px; background: var(--face);
+  border-bottom: 1px solid var(--shadow); box-shadow: inset 0 1px 0 var(--hi);
+}
+.brand { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; }
+.route { display: flex; align-items: center; flex: 1; max-width: 460px; margin: 0 auto; }
+.route a { display: flex; align-items: center; flex: 1; text-decoration: none; }
+.route a:last-child { flex: none; }
+.route a::after { content: ""; flex: 1; height: 2px; margin: 0 4px; background: linear-gradient(var(--shadow) 50%, var(--hi) 50%); }
+.route a:last-child::after { display: none; }
+.route a[data-s="done"]::after { background: linear-gradient(var(--ink) 50%, var(--hi) 50%); }
+/* não iniciada: botão em relevo. em andamento: retângulo pontilhado. concluída: campo branco com visto. atual: azul de seleção */
+.dot {
+  width: 24px; height: 24px; flex: none; display: grid; place-items: center;
+  background: var(--face); color: var(--dark);
+  border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi); box-shadow: inset -1px -1px 0 var(--shadow);
+  font-size: 12px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.route a:hover .dot { color: var(--ink); }
+.route a[data-s="partial"] .dot { color: var(--ink); outline: 1px dotted var(--ink); outline-offset: -5px; }
+.route a[data-s="done"] .dot {
+  background: var(--hi); color: var(--ink); font-weight: 700;
+  border-color: var(--shadow) var(--hi) var(--hi) var(--shadow); box-shadow: inset 1px 1px 0 var(--dark);
+}
+.route a[aria-current="page"] .dot {
+  background: var(--accent); color: #ffffff; outline-color: #ffffff;
+  border-color: var(--dark) var(--hi) var(--hi) var(--dark); box-shadow: inset 1px 1px 0 #000000;
+}
+/* barra de carregamento clássica: campo afundado com 9 blocos em pé, um por etapa concluída */
+.loadbar {
+  display: flex; gap: 2px; flex: none; height: 22px; padding: 3px; background: var(--hi);
+  border: 1px solid; border-color: var(--shadow) var(--hi) var(--hi) var(--shadow); box-shadow: inset 1px 1px 0 var(--dark);
+}
+.loadbar i { width: 9px; height: 100%; background: var(--surface); }
+.loadbar i.on { background: var(--accent); }
+ol.index .s.none { visibility: hidden; }
+
+/* uma etapa por vez */
+main { padding: 80px 24px 96px; }
+.view { max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+.view > header { display: flex; flex-direction: column; gap: 20px; padding-bottom: 12px; }
+h1 {
+  font-size: clamp(40px, 7.4vw, 78px); font-weight: 600; font-stretch: 78%;
+  letter-spacing: -0.035em; line-height: 0.98; text-wrap: balance;
+}
+.lede { font-size: clamp(18px, 2.1vw, 21px); line-height: 1.5; color: var(--muted); max-width: 54ch; text-wrap: pretty; }
+.eyebrow { order: 3; display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 14px; color: var(--muted); }
+.status { display: inline-flex; align-items: center; gap: 8px; }
+.status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--line-strong); }
+.status[data-s="partial"], .status[data-s="done"] { color: var(--ink); }
+.status[data-s="partial"]::before { border-color: var(--ink); background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); }
+.status[data-s="done"]::before { border-color: var(--ink); background: var(--ink); }
+
+/* seção: rótulo à esquerda, conteúdo à direita */
+section {
+  display: grid; grid-template-columns: 168px minmax(0, 1fr); column-gap: 40px; row-gap: 16px; align-items: start;
+  border-top: 1px solid var(--line); padding-top: 26px;
+}
+section > * { grid-column: 2; min-width: 0; }
+section > h2 { grid-column: 1; grid-row: 1; font-size: 14px; font-weight: 600; line-height: 1.5; padding-top: 2px; text-wrap: balance; }
+section > p { max-width: 62ch; }
+ul.plain, ol.plain { margin: 0; padding-left: 1.15em; display: flex; flex-direction: column; gap: 8px; max-width: 62ch; }
+ul.plain li::marker, ol.plain li::marker { color: var(--muted); }
+.note { font-size: 14.5px; line-height: 1.6; color: var(--muted); max-width: 62ch; }
+
+/* passos e critérios com caixa de marcar */
+ol.todo, ul.done { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ol.todo { gap: 22px; counter-reset: step; }
+ol.todo > li, ul.done > li { display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 14px; }
+ol.todo > li { counter-increment: step; }
+ol.todo .body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+ol.todo label::before { content: counter(step) "."; display: inline-block; min-width: 1.7em; color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.todo label, ul.done label { cursor: pointer; max-width: 62ch; }
+ol.todo input:checked + .body > label { color: var(--muted); }
+input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 4px 0 0; flex: none;
+  display: grid; place-content: center; cursor: pointer;
+  border: 1.5px solid var(--line-strong); border-radius: 5px; background: var(--bg);
+}
+input[type="checkbox"]:hover { border-color: var(--ink); }
+input[type="checkbox"]:checked { background: var(--ink); border-color: var(--ink); }
+input[type="checkbox"]:checked::after {
+  content: ""; width: 9px; height: 5px; margin-top: -2px;
+  border-left: 2px solid var(--on-ink); border-bottom: 2px solid var(--on-ink); transform: rotate(-45deg);
+}
+
+/* código: legenda e "Copiar" acima do bloco */
+.code { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 6px; align-items: end; }
+.code figcaption { grid-column: 1; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.code .copy { grid-column: 2; grid-row: 1; background: none; border: 0; padding: 0; cursor: pointer; font: 500 13px/1.4 var(--font-sans); color: var(--muted); }
+.code .copy:hover { color: var(--ink); }
+.code pre {
+  grid-column: 1 / -1; margin: 0; padding: 14px 16px; overflow-x: auto; tab-size: 2;
+  background: var(--surface); border-radius: 10px; font-size: 13px; line-height: 1.6;
+}
+.code pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+/* tabelas: só linhas finas */
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.5; }
+th, td { text-align: left; vertical-align: top; padding: 10px 18px 10px 0; border-bottom: 1px solid var(--line); }
+th:last-child, td:last-child { padding-right: 0; }
+th { padding-top: 0; font-size: 13px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* por quê: a situação à esquerda, a explicação à direita */
+.why dl { margin: 0; display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); column-gap: 28px; }
+.why dt, .why dd { margin: 0; padding: 14px 0; border-top: 1px solid var(--line); line-height: 1.55; }
+.why dt:first-of-type, .why dd:first-of-type { border-top: 0; padding-top: 0; }
+.why dt { font-weight: 600; font-size: 15px; text-wrap: balance; }
+.why dd { font-size: 15.5px; }
+
+/* terminou quando: a única caixa da etapa */
+.gate ul.done { gap: 14px; padding: 18px 20px; border: 1px solid var(--line-strong); border-radius: 12px; }
+.done-msg { display: none; align-items: baseline; flex-wrap: wrap; gap: 6px 18px; margin: 0; font-size: 15px; font-weight: 600; }
+.view.is-done .done-msg { display: flex; }
+.done-msg a, .done-msg button { font-weight: 400; }
+.done-msg button { background: none; border: 0; padding: 0; font: inherit; font-weight: 400; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.done-msg button:hover { color: var(--ink); }
+
+/* se travar */
+.help p { font-size: 14.5px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 400 13px/1.5 var(--font-mono); text-align: left; cursor: pointer; color: var(--ink); background: var(--surface); border: 0; border-radius: 6px; padding: 4px 10px; }
+.chip:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* visão geral: o caminho de um request e o índice */
+ol.path, ol.index { list-style: none; margin: 0; padding: 0; }
+ol.path { counter-reset: stop; }
+ol.path li {
+  counter-increment: stop; display: grid; grid-template-columns: 22px 150px minmax(0, 1fr) auto; column-gap: 16px;
+  padding: 14px 0; border-top: 1px solid var(--line); font-size: 15px; line-height: 1.5;
+}
+ol.path li:first-child { border-top: 0; padding-top: 0; }
+ol.path li::before { content: counter(stop); grid-column: 1; grid-row: 1 / span 2; color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.path b { grid-column: 2; grid-row: 1 / span 2; font-weight: 600; }
+ol.path li > span { grid-column: 3; }
+ol.path .out { color: var(--muted); }
+ol.path a { grid-column: 4; grid-row: 1 / span 2; font-size: 14px; white-space: nowrap; }
+ol.index a {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) 56px 60px 10px; column-gap: 16px; align-items: center;
+  padding: 12px 0; border-top: 1px solid var(--line); text-decoration: none;
+}
+ol.index li:first-child a { border-top: 0; padding-top: 0; }
+ol.index .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.index .t { font-weight: 500; }
+ol.index a:hover .t { text-decoration: underline; text-underline-offset: 3px; }
+ol.index .d, ol.index .h { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.index .s { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--line-strong); }
+ol.index a[data-s="partial"] .s { border-color: var(--ink); background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); }
+ol.index a[data-s="done"] .s { border-color: var(--ink); background: var(--ink); }
+
+/* anterior e próxima */
+.pager { display: flex; justify-content: space-between; gap: 24px; border-top: 1px solid var(--line); padding-top: 28px; }
+.pager a { display: flex; flex-direction: column; gap: 6px; max-width: 48%; text-decoration: none; }
+.pager a.next { margin-left: auto; text-align: right; align-items: flex-end; }
+.pager small { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.pager span { font-size: clamp(19px, 2.6vw, 26px); font-weight: 600; font-stretch: 86%; letter-spacing: -0.02em; line-height: 1.15; }
+.pager a:hover span { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 5px; }
+kbd { font-size: 11px; line-height: 1; padding: 3px 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--muted); }
+@media (hover: none) { kbd { display: none; } }
+
+.foot {
+  max-width: 920px; margin: 72px auto 0; padding-top: 20px; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted);
+}
+.foot button { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.foot button:hover { color: var(--ink); }
+
+/* controles no estilo clássico: cantos retos, relevo de 1px */
+::selection { background: var(--accent); color: #ffffff; }
+:focus-visible { outline: 1px dotted var(--ink); outline-offset: 3px; border-radius: 0; }
+a:hover { color: var(--accent); text-decoration-color: var(--accent); }
+code { border-radius: 0; }
+.status::before, ol.index .s { border-radius: 0; border-color: var(--shadow); }
+input[type="checkbox"], input[type="checkbox"]:hover, input[type="checkbox"]:checked {
+  width: 17px; height: 17px; border-radius: 0; background: var(--hi);
+  border: 1px solid; border-color: var(--shadow) var(--face) var(--face) var(--shadow); box-shadow: inset 1px 1px 0 var(--dark);
+}
+input[type="checkbox"]:checked::after { border-left-color: var(--ink); border-bottom-color: var(--ink); margin: -1px 0 0 1px; }
+.code pre { border-radius: 0; border: 1px solid var(--face); }
+.chip, kbd {
+  border-radius: 0; background: var(--face); color: var(--ink);
+  border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi); box-shadow: inset -1px -1px 0 var(--shadow);
+}
+.chip { padding: 3px 10px; }
+.chip:hover { text-decoration: none; }
+.chip:active { border-color: var(--dark) var(--hi) var(--hi) var(--dark); box-shadow: inset 1px 1px 0 var(--shadow); }
+.gate ul.done { border-radius: 0; border-color: var(--shadow); }
+
+/* cada passo: o que fazer (em negrito), o que é cada coisa nova, como conferir */
+ol.todo label b { font-weight: 700; }
+dl.what { margin: 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--face); font-size: 14.5px; line-height: 1.55; max-width: 64ch; }
+dl.what::before { content: "O que é"; display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+dl.what dt { font-weight: 600; }
+dl.what dd { margin: 0 0 9px; }
+dl.what dd:last-child { margin-bottom: 0; }
+.check { font-size: 14.5px; line-height: 1.6; color: var(--muted); max-width: 62ch; }
+.check b { color: var(--ink); font-weight: 600; }
+
+/* perguntas de entrevista: abrem no clique */
+.qa { display: flex; flex-direction: column; max-width: 64ch; }
+.qa details { border-top: 1px solid var(--line); }
+.qa details:first-child { border-top: 0; }
+.qa summary { cursor: pointer; padding: 12px 0; font-weight: 600; list-style: none; display: flex; gap: 10px; }
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary::before {
+  content: "+"; flex: none; width: 17px; height: 17px; margin-top: 3px; display: grid; place-items: center;
+  font: 600 12px/1 var(--font-mono); background: var(--face);
+  border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi);
+}
+.qa details[open] summary::before { content: "−"; }
+.qa details p { padding: 0 0 14px 27px; font-size: 15.5px; }
+.view > header .lede a { color: inherit; }
+
+@media (max-width: 760px) {
+  .bar { flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px 14px; }
+  .brand { margin-right: auto; }
+  .route { order: 5; flex-basis: 100%; max-width: none; margin: 0; }
+  main { padding: 44px 16px 72px; }
+  .view { gap: 36px; }
+  section { grid-template-columns: minmax(0, 1fr); row-gap: 14px; padding-top: 22px; }
+  section > *, section > h2 { grid-column: 1; }
+  .why dl { grid-template-columns: minmax(0, 1fr); }
+  .why dt { padding-bottom: 2px; }
+  .why dd { border-top: 0; padding-top: 0; }
+  .why dd:first-of-type { padding-top: 0; }
+  ol.path li { grid-template-columns: 22px minmax(0, 1fr); }
+  ol.path b, ol.path li > span, ol.path a { grid-column: 2; grid-row: auto; }
+  ol.index a { grid-template-columns: 22px minmax(0, 1fr) 48px 10px; }
+  ol.index .h { display: none; }
+  .pager a { max-width: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .view.enter { animation: enter 0.16s ease-out; }
+  @keyframes enter { from { opacity: 0; } to { opacity: 1; } }
+  .dot, input[type="checkbox"], .gate ul.done { transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s; }
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="#visao-geral" data-nav="visao-geral">System design com LLM</a>
+  <nav class="route" aria-label="Lições"><a href="#licao-1" data-nav="licao-1" title="Proxy reverso" aria-label="Lição 1: Proxy reverso"><span class="dot">1</span></a><a href="#licao-2" data-nav="licao-2" title="Streaming" aria-label="Lição 2: Streaming"><span class="dot">2</span></a><a href="#licao-3" data-nav="licao-3" title="Rate limit por tokens" aria-label="Lição 3: Rate limit por tokens"><span class="dot">3</span></a><a href="#licao-4" data-nav="licao-4" title="Balanceamento de carga" aria-label="Lição 4: Balanceamento de carga"><span class="dot">4</span></a><a href="#licao-5" data-nav="licao-5" title="Failover, retry e backoff" aria-label="Lição 5: Failover, retry e backoff"><span class="dot">5</span></a><a href="#licao-6" data-nav="licao-6" title="Circuit breaker" aria-label="Lição 6: Circuit breaker"><span class="dot">6</span></a><a href="#licao-7" data-nav="licao-7" title="Fila e load shedding" aria-label="Lição 7: Fila e load shedding"><span class="dot">7</span></a><a href="#licao-8" data-nav="licao-8" title="Cache de respostas" aria-label="Lição 8: Cache de respostas"><span class="dot">8</span></a><a href="#licao-9" data-nav="licao-9" title="Métricas e teste de carga" aria-label="Lição 9: Métricas e teste de carga"><span class="dot">9</span></a><a href="#entrevista" data-nav="entrevista" title="Perguntas de entrevista" aria-label="Perguntas de entrevista"><span class="dot">?</span></a></nav>
+  <div class="loadbar" id="loadbar" role="progressbar" aria-label="Lições lidas" aria-valuemin="0" aria-valuemax="9" aria-valuenow="0" title="0 de 9 lições lidas"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</header>
+
+<main>
+
+<!-- ============================ VISÃO GERAL ============================ -->
+<article class="view" id="view-visao-geral" data-view="visao-geral">
+  <header>
+    <div class="eyebrow"><span class="tag">9 lições</span><span class="tag">10 a 15 min cada</span><span class="tag">Código aberto</span></div>
+    <h1>System design com um gateway de LLM</h1>
+    <p class="lede">Os conceitos de arquitetura que aparecem quando um produto usa LLM em produção, explicados com o código e os números de um projeto que roda: o <a href="https://github.com/nicomsz/llm-gateway">llm-gateway</a>.</p>
+  </header>
+
+  <section>
+    <h2>O que é um gateway de LLM</h2>
+    <p>É um servidor que fica entre os seus apps e as APIs dos modelos (Anthropic, OpenAI e outras). Os apps chamam o gateway no lugar do provedor, e o gateway resolve num lugar só o que todo app com LLM acaba precisando.</p>
+    <p>Sem gateway, cada serviço chama a API do modelo direto, com a chave real:</p>
+    <figure class="code"><figcaption>em cada serviço, sem gateway</figcaption><pre><code>const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });</code></pre></figure>
+    <p>Com o gateway, o serviço troca só o endereço e a chave. O resto do código continua igual, porque o gateway fala o mesmo formato da API:</p>
+    <figure class="code"><figcaption>em cada serviço, com gateway</figcaption><pre><code>const client = new Anthropic({ baseURL: 'http://localhost:3000', apiKey: 'gw_acme_123' });</code></pre></figure>
+  </section>
+
+  <section class="why">
+    <h2>Os problemas que ele resolve</h2>
+    <dl>
+      <dt>O provedor fica fora do ar</dt>
+      <dd>A API do modelo devolve erro de sobrecarga por 20 minutos, e o seu produto cai junto. O gateway troca de provedor sozinho.</dd>
+      <dt>Um cliente gasta a cota de todos</dt>
+      <dd>Um cliente dispara requests em loop e consome os tokens que eram de todos os outros. O gateway limita cada cliente separadamente.</dd>
+      <dt>Ninguém sabe quanto custa</dt>
+      <dd>Alguém pergunta "quanto o cliente X custou este mês?" e não tem como responder. O gateway registra tokens e custo de cada request.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>O caminho de um request</h2>
+    <p>Cada request passa por estas paradas, nesta ordem. Cada parada responde uma pergunta e pode encerrar o request ali mesmo.</p>
+    <ol class="path">
+      <li><b>Autenticação</b><span>Quem é o cliente?</span><span class="out">Recusa com <code>401</code></span><a href="#licao-1">lição 1</a></li>
+      <li><b>Cache</b><span>Essa pergunta já foi respondida?</span><span class="out">Responde na hora, sem chamar o provedor</span><a href="#licao-8">lição 8</a></li>
+      <li><b>Rate limit</b><span>O cliente ainda tem tokens na cota?</span><span class="out">Recusa com <code>429</code></span><a href="#licao-3">lição 3</a></li>
+      <li><b>Balanceador</b><span>Para qual provedor mandar?</span><span class="out">Escolhe entre os que estão saudáveis</span><a href="#licao-4">lição 4</a></li>
+      <li><b>Circuit breaker</b><span>Esse provedor está falhando?</span><span class="out">Pula o provedor</span><a href="#licao-6">lição 6</a></li>
+      <li><b>Fila</b><span>O provedor tem vaga agora?</span><span class="out">Espera, ou recusa com <code>503</code></span><a href="#licao-7">lição 7</a></li>
+      <li><b>Chamada e streaming</b><span>Repassa a resposta enquanto ela chega</span><span class="out">Se falhar, tenta outro provedor</span><a href="#licao-2">lição 2</a></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>As 9 lições</h2>
+    <ol class="index"><li><a href="#licao-1" data-idx="1"><span class="n">1</span><span class="t">Proxy reverso</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-2" data-idx="2"><span class="n">2</span><span class="t">Streaming</span><span class="d">15 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-3" data-idx="3"><span class="n">3</span><span class="t">Rate limit por tokens</span><span class="d">15 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-4" data-idx="4"><span class="n">4</span><span class="t">Balanceamento de carga</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-5" data-idx="5"><span class="n">5</span><span class="t">Failover, retry e backoff</span><span class="d">15 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-6" data-idx="6"><span class="n">6</span><span class="t">Circuit breaker</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-7" data-idx="7"><span class="n">7</span><span class="t">Fila e load shedding</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-8" data-idx="8"><span class="n">8</span><span class="t">Cache de respostas</span><span class="d">10 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#licao-9" data-idx="9"><span class="n">9</span><span class="t">Métricas e teste de carga</span><span class="d">15 min</span><span class="h"></span><span class="s" aria-hidden="true"></span></a></li><li><a href="#entrevista"><span class="n">?</span><span class="t">Perguntas de entrevista</span><span class="d"></span><span class="h"></span><span class="s none" aria-hidden="true"></span></a></li></ol>
+  </section>
+
+  <section>
+    <h2>Termos que o guia usa</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Termo</th><th>O que é</th></tr></thead>
+      <tbody>
+        <tr><td>Tenant</td><td>Um cliente do gateway: um app, um time ou uma empresa. Cada tenant tem a sua chave e a sua cota.</td></tr>
+        <tr><td>Provedor</td><td>A API que roda o modelo. No projeto, são três provedores falsos que imitam a API da Anthropic.</td></tr>
+        <tr><td>Token</td><td>O pedaço de texto que o modelo lê ou escreve, e a unidade em que ele é cobrado. Um token tem cerca de 4 caracteres.</td></tr>
+        <tr><td>SSE</td><td>Server-Sent Events: o formato em que a API manda a resposta aos pedaços, pela mesma conexão HTTP.</td></tr>
+        <tr><td>TTFT</td><td>Time to first token: o tempo até o primeiro pedaço da resposta chegar. É o que o usuário sente como "começou a responder".</td></tr>
+        <tr><td>p50 e p99</td><td>A latência que 50% e 99% dos requests não passaram. O p99 mostra o pior caso que ainda acontece com frequência.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Como cada lição funciona</h2>
+    <p>Toda lição tem as mesmas partes, sempre na mesma ordem:</p>
+    <ol class="plain">
+      <li><b>Em uma frase:</b> o que é o conceito.</li>
+      <li><b>Quando você precisa:</b> situações reais em que ele é a escolha certa.</li>
+      <li><b>Por que é a escolha comum:</b> o que ele ganha das alternativas.</li>
+      <li><b>Como funciona:</b> o fluxo, passo a passo, e o trecho do código do projeto que faz isso.</li>
+      <li><b>O que o experimento mostrou:</b> o mecanismo ligado e desligado, com números medidos.</li>
+      <li><b>Pergunta de entrevista:</b> uma pergunta que costuma aparecer sobre o assunto, com a resposta curta.</li>
+    </ol>
+    <p>Uma lição conta como lida quando você rola a página dela até o fim. Cada lição lida acende um bloco na barra do topo, e o progresso fica salvo neste navegador.</p>
+  </section>
+
+  <section>
+    <h2>Sobre os números</h2>
+    <p>Os números das lições saem do comando <code>pnpm bench</code> do repositório. Ele sobe três provedores falsos, com latência fixa de 100 ms, e o gateway, tudo na mesma máquina. Os números mostram o efeito de cada mecanismo, não o desempenho com uma API real. Você pode rodar e conferir:</p>
+    <figure class="code"><figcaption>no terminal</figcaption><pre><code>git clone https://github.com/nicomsz/llm-gateway
+cd llm-gateway
+pnpm install
+pnpm test     # 94 testes
+pnpm bench    # os experimentos, cerca de 3 minutos</code></pre></figure>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="next" href="#licao-1"><small>Comece aqui<kbd>→</kbd></small><span>Proxy reverso</span></a></nav>
+</article>
+
+<!-- ============================ LIÇÃO 1 ============================ -->
+<article class="view" id="view-licao-1" data-view="licao-1" data-step="1" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 1 de 9</span><span class="tag">10 min</span><span class="tag status">Não lida</span></div>
+    <h1>Proxy reverso: o gateway no meio do caminho</h1>
+    <p class="lede">Por que colocar um servidor a mais entre o app e o provedor, e quanto isso custa em latência.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p>Um <b>proxy reverso</b> é um servidor que recebe os requests no lugar do servidor de verdade, decide o que fazer com cada um e repassa para quem responde. O gateway de LLM é um proxy reverso especializado em APIs de modelos.</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>Mais de um app usa LLM</dt>
+      <dd>Sem um ponto central, cada app reimplementa retry, limite e log do seu jeito, e cada um tem uma cópia da chave real da API.</dd>
+      <dt>A chave não pode vazar</dt>
+      <dd>O app recebe uma chave do gateway (<code>gw_acme_123</code>). A chave real do provedor fica só no gateway. Se a chave do app vazar, você revoga só ela.</dd>
+      <dt>Você precisa trocar de provedor</dt>
+      <dd>Com o gateway, mudar de provedor ou somar um segundo é mudança de configuração num lugar só, sem deploy dos apps.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p>A alternativa é uma biblioteca compartilhada, instalada em cada app. Ela resolve retry e log, mas não resolve o que depende de estado compartilhado: a cota de um tenant precisa ser contada num lugar só, mesmo que ele use três apps. A biblioteca também espalha a chave real por todos os apps, e uma correção nela exige atualizar e publicar cada app de novo.</p>
+    <p>O custo do gateway é um salto de rede a mais e um ponto a mais que pode cair. Por isso ele precisa ser leve (o experimento abaixo mede isso) e rodar em mais de uma cópia.</p>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <ol class="plain">
+      <li>O app manda <code>POST /v1/messages</code> para o gateway, com a chave do tenant no header <code>x-api-key</code>.</li>
+      <li>O gateway procura a chave na lista de tenants. Se não achar, responde <code>401</code> e para ali.</li>
+      <li>Ele passa pelas outras paradas (cache, rate limit, balanceador) e chama o provedor escolhido, agora com a chave real.</li>
+      <li>A resposta do provedor volta para o app sem alteração. O gateway só acrescenta headers próprios, como <code>x-gateway-upstream</code>, que diz qual provedor respondeu.</li>
+      <li>No fim, o gateway grava uma linha de log com o tenant, o provedor, a latência, os tokens e o custo.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: a autenticação</figcaption><pre><code>const key = req.headers['x-api-key'];
+tenant = typeof key === 'string' &amp;&amp; Object.hasOwn(config.tenants, key) ? config.tenants[key] : undefined;
+if (!tenant) return sendError(res, 401, 'authentication_error', 'chave de tenant inválida');</code></pre></figure>
+    <p class="note"><code>Object.hasOwn</code> e não <code>config.tenants[key]</code> direto: com o acesso direto, a chave <code>"constructor"</code> acharia uma função herdada do <code>Object</code> e passaria como tenant.</p>
+  </section>
+
+  <section>
+    <h2>O que o experimento mostrou</h2>
+    <p>2.000 requests, 20 ao mesmo tempo, para um provedor falso que responde em 100 ms. Primeiro direto, depois pelo gateway.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Caminho</th><th>p50</th><th>p99</th><th>Requests por segundo</th></tr></thead>
+      <tbody>
+        <tr><td>Direto no provedor</td><td class="num">102,9 ms</td><td class="num">113,2 ms</td><td class="num">193</td></tr>
+        <tr><td>Pelo gateway</td><td class="num">103,9 ms</td><td class="num">119,4 ms</td><td class="num">189</td></tr>
+      </tbody>
+    </table></div>
+    <p>O gateway acrescentou 1 ms na mediana e 6 ms no p99. Perto de uma chamada de LLM, que leva de centenas de milissegundos a vários segundos, é ruído.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>O gateway não vira um ponto único de falha?</b></p>
+    <p>Vira, se rodar uma cópia só. Por isso ele roda em várias cópias atrás de um load balancer comum, e o estado que precisa ser compartilhado (a cota dos tenants e o cache) fica no Redis, não na memória de cada cópia. A lição 3 mostra o que acontece quando o próprio Redis cai.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#visao-geral"><small><kbd>←</kbd>Anterior</small><span>Visão geral</span></a><a class="next" href="#licao-2"><small>Próxima<kbd>→</kbd></small><span>Streaming</span></a></nav>
+</article>
+
+<!-- ============================ LIÇÃO 2 ============================ -->
+<article class="view" id="view-licao-2" data-view="licao-2" data-step="2" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 2 de 9</span><span class="tag">15 min</span><span class="tag status">Não lida</span></div>
+    <h1>Streaming, backpressure e cancelamento</h1>
+    <p class="lede">Como repassar a resposta aos pedaços sem segurar nada, sem estourar a memória e sem pagar por texto que ninguém vai ler.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p>Com <b>streaming</b>, o provedor manda a resposta em pedaços enquanto o modelo gera, e o gateway repassa cada pedaço para o app assim que ele chega.</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>Chat com o usuário esperando</dt>
+      <dd>Uma resposta longa leva 10 segundos para ficar pronta. Com streaming, o texto começa a aparecer em menos de 1 segundo. O tempo total é o mesmo; o que muda é quando o usuário vê o primeiro pedaço (o TTFT).</dd>
+      <dt>O usuário fecha a aba</dt>
+      <dd>O modelo continua gerando texto, e você continua pagando por ele, a menos que alguém avise o provedor que ninguém está mais lendo.</dd>
+      <dt>O cliente está numa rede lenta</dt>
+      <dd>O provedor manda mais rápido do que o celular do cliente consegue receber. Sem controle, o gateway acumula o excesso na memória.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p>A API de mensagens usa <b>SSE</b> (Server-Sent Events): a resposta é um HTTP comum, com <code>content-type: text/event-stream</code>, que não termina até o último evento. Comparado a WebSocket, SSE é HTTP comum: usa os mesmos headers, a mesma autenticação e as mesmas ferramentas de qualquer request, e o fluxo só vai do servidor para o cliente, que é exatamente o caso de uma resposta de modelo.</p>
+    <p>O gateway não monta a resposta inteira antes de repassar. Se montasse, o TTFT do app seria o tempo total da resposta, e o streaming do provedor não serviria para nada.</p>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <p>O que trafega na conexão é texto, um evento por bloco, separado por linha em branco:</p>
+    <figure class="code"><figcaption>a resposta do provedor, como ela chega</figcaption><pre><code>event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":24,"output_tokens":1}}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Olá"}}
+
+event: message_delta
+data: {"type":"message_delta","usage":{"output_tokens":12}}
+
+event: message_stop
+data: {"type":"message_stop"}</code></pre></figure>
+    <p>O gateway faz três coisas com esse fluxo, ao mesmo tempo:</p>
+    <ol class="plain">
+      <li><b>Repassa</b> cada pedaço para o app assim que chega, sem esperar o próximo.</li>
+      <li><b>Lê</b> os eventos no caminho, para saber quantos tokens foram usados (<code>message_start</code> traz a entrada, <code>message_delta</code> traz a saída acumulada) e calcular o custo.</li>
+      <li><b>Respeita o ritmo do cliente:</b> <code>res.write()</code> devolve <code>false</code> quando o buffer de saída para o cliente encheu. Aí o gateway para de ler do provedor até o evento <code>drain</code>, que avisa que o buffer esvaziou. Isso é <b>backpressure</b>: quem recebe mais devagar controla a velocidade de quem manda.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: o laço do streaming</figcaption><pre><code>for await (const chunk of response.body!) {
+  log.ttftMs ??= Math.round(performance.now() - startedAt);
+  tracker.feed(parser.push(chunk));
+  // backpressure: se o cliente não está conseguindo receber, paramos de ler do provedor
+  if (!res.write(chunk)) await once(res, 'drain', { signal: abort.signal });
+}</code></pre></figure>
+    <p>E o cancelamento: quando o app fecha a conexão antes do fim, o gateway cancela a chamada ao provedor com um <code>AbortController</code>. A conexão com o provedor fecha, e ele para de gerar.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: o cliente foi embora</figcaption><pre><code>const client = new AbortController();
+res.on('close', () =&gt; {
+  if (!res.writableEnded) {
+    log.canceled = true;
+    client.abort();   // cancela a fila, a espera e a chamada ao provedor
+  }
+});</code></pre></figure>
+  </section>
+
+  <section>
+    <h2>O que o experimento mostrou</h2>
+    <p>Um provedor que manda o primeiro pedaço em 200 ms e depois 20 pedaços, um a cada 50 ms. 300 requests, 20 ao mesmo tempo.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Caminho</th><th>Primeiro pedaço, p50</th><th>Primeiro pedaço, p99</th><th>Resposta completa, p50</th></tr></thead>
+      <tbody>
+        <tr><td>Direto no provedor</td><td class="num">202 ms</td><td class="num">207 ms</td><td class="num">1.208 ms</td></tr>
+        <tr><td>Pelo gateway</td><td class="num">203 ms</td><td class="num">221 ms</td><td class="num">1.208 ms</td></tr>
+      </tbody>
+    </table></div>
+    <p>O primeiro pedaço chega pelo gateway 1 ms depois de chegar direto. Se o gateway montasse a resposta antes de repassar, esse número seria 1.208 ms.</p>
+    <p>No teste de cancelamento, 100 clientes fecharam a conexão 400 ms depois de enviar. Os 100 cancelamentos chegaram ao provedor, que gerou 429 dos 2.000 pedaços que geraria: 21% do texto, e do custo.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>Por que o gateway não guarda a resposta inteira e manda de uma vez?</b></p>
+    <p>Porque o TTFT do app viraria o tempo total da resposta, e a memória do gateway cresceria com o tamanho de cada resposta vezes o número de requests em andamento. Repassando pedaço por pedaço, com backpressure, cada request ocupa no máximo o tamanho de um buffer.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-1"><small><kbd>←</kbd>Anterior</small><span>Proxy reverso</span></a><a class="next" href="#licao-3"><small>Próxima<kbd>→</kbd></small><span>Rate limit por tokens</span></a></nav>
+</article>
+
+<!-- ============================ LIÇÃO 3 ============================ -->
+<article class="view" id="view-licao-3" data-view="licao-3" data-step="3" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 3 de 9</span><span class="tag">15 min</span><span class="tag status">Não lida</span></div>
+    <h1>Rate limit por tokens</h1>
+    <p class="lede">Como impedir que um tenant gaste a capacidade de todos, contando o que realmente custa: tokens, e não requests.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p><b>Rate limit</b> é o limite de quanto cada tenant pode consumir por unidade de tempo. Aqui ele é contado em tokens do modelo, com o algoritmo <b>token bucket</b>.</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>Um tenant com bug em loop</dt>
+      <dd>Um app entra em loop e manda 300 requests por segundo. Sem limite por tenant, ele ocupa a capacidade do provedor, e os outros tenants recebem erro.</dd>
+      <dt>Requests de tamanhos muito diferentes</dt>
+      <dd>Um request de 50 tokens e um de 50.000 custam valores muito diferentes. Um limite de "100 requests por minuto" deixa passar o caro e barra o barato.</dd>
+      <dt>Plano gratuito e plano pago</dt>
+      <dd>Cada tenant tem a sua cota. Mudar o plano de um cliente é mudar um número.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p>O token bucket guarda só dois números por tenant: o saldo e a hora da última atualização. O saldo sobe numa taxa fixa até um teto, e cada request desconta dele. Comparado à janela fixa ("6.000 tokens por minuto, zerando no minuto cheio"), ele não deixa o tenant gastar a cota inteira no fim de um minuto e de novo no começo do seguinte. Comparado a guardar a hora de cada request (janela deslizante), ele usa memória constante.</p>
+    <p>O problema específico de LLM: só depois da resposta se sabe quantos tokens o request usou. A solução é <b>reservar e devolver</b>: na entrada, o gateway desconta uma estimativa (o tamanho do texto dividido por 4, mais o <code>max_tokens</code> pedido); no fim, devolve ao saldo o que não foi usado.</p>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <p>Exemplo com uma cota de 6.000 tokens por minuto, ou seja, 100 tokens por segundo de recarga:</p>
+    <ol class="plain">
+      <li>O tenant chega com saldo cheio: 6.000.</li>
+      <li>Um request estima 1.200 tokens. O saldo cai para 4.800, e o request passa.</li>
+      <li>A resposta usou só 300. O gateway devolve 900: o saldo vai para 5.700.</li>
+      <li>Se um request estimar mais do que o saldo, o gateway responde <code>429</code> com o header <code>retry-after</code>: quantos segundos faltam para a recarga cobrir a diferença.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/tokenBucket.ts">src/gateway/tokenBucket.ts</a>: recarga e desconto</figcaption><pre><code>const elapsedSec = Math.max(0, now - bucket.ts) / 1000;
+bucket.tokens = Math.min(capacity, bucket.tokens + elapsedSec * ratePerSec);
+bucket.ts = now;
+
+if (amount &lt;= bucket.tokens) {
+  bucket.tokens -= amount;
+  return { allowed: true, remaining: Math.floor(bucket.tokens), retryAfterSec: 0 };
+}
+return { allowed: false, remaining: Math.floor(bucket.tokens),
+         retryAfterSec: Math.ceil((amount - bucket.tokens) / ratePerSec) };</code></pre></figure>
+    <p>Com várias cópias do gateway, o saldo precisa ficar num lugar só: o Redis. Mas "ler o saldo, calcular, gravar" em três comandos separados tem uma corrida: duas cópias leem o mesmo saldo de 1.000, as duas descontam 800, e as duas deixam passar. Por isso a conta roda num <b>script Lua</b> dentro do Redis, que executa o script inteiro antes de atender qualquer outro comando.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/redis.ts">src/gateway/redis.ts</a>: a mesma conta, atômica, no Redis</figcaption><pre><code>local data = redis.call('HMGET', KEYS[1], 'tokens', 'ts')
+-- ... recarga igual à versão em memória ...
+if amount &lt;= tokens then
+  tokens = tokens - amount
+  allowed = 1
+end
+redis.call('HSET', KEYS[1], 'tokens', tostring(tokens), 'ts', tostring(now))</code></pre></figure>
+    <p>E se o Redis cair? O gateway deixa o request passar (<b>fail open</b>): fica sem limite por um tempo em vez de derrubar todos os tenants junto com o Redis. Para um sistema em que estourar a cota custa mais caro do que ficar fora do ar, a escolha certa seria o contrário (<b>fail closed</b>).</p>
+  </section>
+
+  <section>
+    <h2>O que o experimento mostrou</h2>
+    <p>Um provedor com capacidade para cerca de 100 requests por segundo. O tenant <code>acme</code> manda 300 por segundo; o tenant <code>beta</code> manda 20 por segundo.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Configuração</th><th>beta: erros</th><th>beta: p50</th><th>acme: atendidos</th><th>acme: 429</th></tr></thead>
+      <tbody>
+        <tr><td>Sem rate limit</td><td class="num">75,1%</td><td class="num">1.137 ms</td><td class="num">1.665</td><td class="num">0</td></tr>
+        <tr><td>Com rate limit</td><td class="num">0%</td><td class="num">104 ms</td><td class="num">245</td><td class="num">4.855</td></tr>
+      </tbody>
+    </table></div>
+    <p>Sem limite, o <code>beta</code>, que mandava pouco, perdeu três de cada quatro requests por causa do <code>acme</code>. Com o limite, o <code>acme</code> recebe <code>429</code> e o <code>beta</code> nem percebe o vizinho.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>Por que contar tokens, e não requests?</b></p>
+    <p>Porque o custo e a carga de um request de LLM variam centenas de vezes com o tamanho do texto. Limite por request trata igual o barato e o caro. O detalhe que mostra que você entendeu: o custo real só é conhecido no fim, então você reserva uma estimativa na entrada e devolve a diferença na saída.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-2"><small><kbd>←</kbd>Anterior</small><span>Streaming</span></a><a class="next" href="#licao-4"><small>Próxima<kbd>→</kbd></small><span>Balanceamento de carga</span></a></nav>
+</article>
+
+<!-- ============================ LIÇÃO 4 ============================ -->
+<article class="view" id="view-licao-4" data-view="licao-4" data-step="4" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 4 de 9</span><span class="tag">10 min</span><span class="tag status">Não lida</span></div>
+    <h1>Balanceamento de carga</h1>
+    <p class="lede">Como escolher o provedor de cada request, e por que a estratégia "mais esperta" foi a que mais errou quando um provedor caiu.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p><b>Balanceamento de carga</b> é a regra que decide para qual dos provedores disponíveis vai cada request.</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>Mais de uma conta ou região</dt>
+      <dd>Cada conta de API tem o seu limite de requests por minuto. Duas contas, ou a mesma API em duas regiões, somam capacidade, desde que o tráfego seja dividido entre elas.</dd>
+      <dt>Provedores com velocidades diferentes</dt>
+      <dd>Um provedor está mais lento hoje. Mandar para ele a mesma quantidade que para os outros acumula requests esperando nele.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p>As duas estratégias mais usadas, e as duas que o projeto implementa:</p>
+    <ul class="plain">
+      <li><b>Rodízio (round-robin):</b> um para cada, em ordem. Não precisa de nenhuma informação sobre os provedores e divide igual.</li>
+      <li><b>Menos ocupado (least-in-flight):</b> manda para o provedor com menos requests em andamento. Se adapta sozinho a um provedor mais lento, porque os requests dele demoram a terminar e o contador dele fica alto.</li>
+    </ul>
+    <p>"Menos ocupado" costuma ser a melhor escolha quando os tempos de resposta variam muito, que é o caso de LLM: um request pode levar 200 ms e o seguinte 30 segundos.</p>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/balancer.ts">src/gateway/balancer.ts</a>: menos ocupado, com o rodízio como desempate</figcaption><pre><code>let chosen = ordered[0]!;   // ordered: os candidatos a partir de quem vem depois do último escolhido
+if (this.strategy === 'least-in-flight') {
+  const load = (state: UpstreamState) =&gt; state.limiter.inFlight + state.limiter.queued;
+  for (const state of ordered) if (load(state) &lt; load(chosen)) chosen = state;
+}
+this.cursor = this.all.indexOf(chosen);</code></pre></figure>
+    <p>A carga de um provedor é quantos requests estão em andamento nele mais quantos esperam na fila dele. No empate, vale a ordem do rodízio, para não mandar tudo para o primeiro da lista.</p>
+  </section>
+
+  <section>
+    <h2>O que o experimento mostrou</h2>
+    <p>Três provedores de 100 ms; um deles devolvendo erro <code>529</code> (sobrecarregado) em tudo. 150 requests por segundo durante 8 segundos, sem nenhuma nova tentativa.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Estratégia</th><th>Erros</th><th>Chamadas ao provedor caído</th></tr></thead>
+      <tbody>
+        <tr><td>Rodízio</td><td class="num">33,3%</td><td class="num">400 de 1.200</td></tr>
+        <tr><td>Menos ocupado</td><td class="num">87,2%</td><td class="num">1.046 de 1.200</td></tr>
+      </tbody>
+    </table></div>
+    <p>O rodízio errou exatamente 1 de cada 3, como esperado. O "menos ocupado" errou quase tudo. O motivo: o provedor caído responde o erro quase na hora, então ele quase nunca tem request em andamento. Para o balanceador, ele é sempre o mais livre, e recebe quase tudo.</p>
+    <p>A lição: "menos ocupado" mede a fila, não a saúde. Um provedor que falha rápido parece ótimo. Quem resolve isso é o circuit breaker (lição 6), que tira o provedor doente da lista de candidatos.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>Least connections é sempre melhor que round-robin?</b></p>
+    <p>Não. Ele se adapta a provedores lentos, mas um provedor que devolve erro rápido fica com zero conexões e passa a receber todo o tráfego. Ele precisa vir junto com health check ou circuit breaker, que tiram o provedor doente da escolha.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-3"><small><kbd>←</kbd>Anterior</small><span>Rate limit por tokens</span></a><a class="next" href="#licao-5"><small>Próxima<kbd>→</kbd></small><span>Failover, retry e backoff</span></a></nav>
+</article>
+
+<!-- ============================ LIÇÃO 5 ============================ -->
+<article class="view" id="view-licao-5" data-view="licao-5" data-step="5" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 5 de 9</span><span class="tag">15 min</span><span class="tag status">Não lida</span></div>
+    <h1>Failover, retry e backoff</h1>
+    <p class="lede">Quando vale tentar de novo em outro provedor, quanto esperar antes, e o momento em que não dá mais para trocar.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p><b>Failover</b> é tentar o mesmo request em outro provedor quando o primeiro falha; <b>backoff</b> é a espera entre uma tentativa e a próxima.</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>O provedor está sobrecarregado</dt>
+      <dd>A API devolve <code>529</code> (sobrecarga) ou <code>503</code>. Outro provedor, ou o mesmo uns segundos depois, provavelmente responde.</dd>
+      <dt>A conexão caiu no meio do caminho</dt>
+      <dd>A rede falhou antes da resposta chegar. O request não chegou a ser processado, ou foi processado e a resposta se perdeu; tentar de novo resolve os dois casos para uma pergunta ao modelo.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p>Nem todo erro merece nova tentativa. A regra do projeto:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Resultado</th><th>Tenta de novo?</th><th>Por quê</th></tr></thead>
+      <tbody>
+        <tr><td>Falha de conexão, tempo limite</td><td>Sim</td><td>Problema no caminho ou no provedor</td></tr>
+        <tr><td><code>429</code>, <code>529</code>, <code>500</code> a <code>504</code></td><td>Sim</td><td>O provedor está sobrecarregado ou com defeito</td></tr>
+        <tr><td><code>400</code>, <code>401</code>, <code>404</code></td><td>Não</td><td>O problema é o request: outro provedor daria a mesma resposta</td></tr>
+      </tbody>
+    </table></div>
+    <p>E a espera entre tentativas dobra a cada falha, até um teto, multiplicada por um número aleatório entre 0 e 1. Esse número aleatório é o <b>jitter</b>: sem ele, 1.000 requests que falharam no mesmo segundo tentam de novo todos no mesmo instante e derrubam o provedor que estava se recuperando.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/balancer.ts">src/gateway/balancer.ts</a>: backoff exponencial com jitter</figcaption><pre><code>export function backoffMs(attempt: number, random: number, baseMs = 200, capMs = 2000): number {
+  return Math.min(capMs, baseMs * 2 ** attempt) * random;
+}
+// tentativa 1: até 200 ms; tentativa 2: até 400 ms; tentativa 3: até 800 ms ... nunca mais que 2 s</code></pre></figure>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <ol class="plain">
+      <li>O gateway escolhe um provedor entre os que ainda não foram tentados neste request.</li>
+      <li>Se ele falhar com um erro que vale nova tentativa, o gateway espera o backoff e escolhe outro.</li>
+      <li>Há um prazo total por request. Se a próxima espera passar do prazo, o gateway desiste e devolve o último erro.</li>
+      <li><b>A regra do primeiro byte:</b> no streaming, depois que o primeiro pedaço foi enviado ao app, não existe mais troca de provedor. O app já mostrou parte do texto; começar de novo em outro provedor duplicaria a resposta. Se o provedor falhar no meio, o app recebe um evento de erro no próprio stream.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: o laço de tentativas</figcaption><pre><code>for (let attempt = 0; attempt &lt; config.retry.maxAttempts &amp;&amp; !client.signal.aborted; attempt++) {
+  if (attempt &gt; 0) {
+    const wait = backoffMs(attempt - 1, random(), config.retry.baseMs, config.retry.capMs);
+    if (Date.now() + wait &gt;= deadline) break;
+    await sleep(wait);
+  }
+  const candidates = states.filter((s) =&gt; !tried.has(s) &amp;&amp; (!config.breaker.enabled || s.breaker.available()));
+  const state = balancer.pick(candidates);
+  if (!state) break;
+  tried.add(state);
+
+  const outcome = await attemptOnce(state, ctx);
+  if (outcome.kind === 'sent') break;     // respondeu: acabou
+  if (!outcome.retryable) break;          // erro do request: outro provedor não resolve
+}</code></pre></figure>
+  </section>
+
+  <section>
+    <h2>O que o experimento mostrou</h2>
+    <p>O mesmo cenário da lição 4: três provedores, um devolvendo <code>529</code> em tudo.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Configuração</th><th>Erros</th><th>p50</th><th>p99</th><th>Chamadas ao caído</th></tr></thead>
+      <tbody>
+        <tr><td>Menos ocupado, sem failover</td><td class="num">87,2%</td><td class="num">104 ms</td><td class="num">126 ms</td><td class="num">1.046</td></tr>
+        <tr><td>Menos ocupado, com failover</td><td class="num">0%</td><td class="num">206 ms</td><td class="num">303 ms</td><td class="num">1.196</td></tr>
+      </tbody>
+    </table></div>
+    <p>O failover zerou os erros, mas a mediana dobrou. Quase todo request (1.196 de 1.200) ainda tentou primeiro o provedor caído, levou o erro e esperou o backoff (até 200 ms, em média 100 ms) antes de ir para um provedor bom. Failover sozinho troca erro por latência. A lição 6 mostra como recuperar a latência.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>Por que jitter no backoff?</b></p>
+    <p>Porque falhas chegam em grupo. Sem jitter, todos os clientes que falharam juntos esperam o mesmo tempo e tentam de novo no mesmo instante, criando um pico que pode derrubar o servidor de novo (o efeito manada, ou <i>thundering herd</i>). O número aleatório espalha as novas tentativas no tempo.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-4"><small><kbd>←</kbd>Anterior</small><span>Balanceamento de carga</span></a><a class="next" href="#licao-6"><small>Próxima<kbd>→</kbd></small><span>Circuit breaker</span></a></nav>
+</article>
+
+<!-- ============================ LIÇÃO 6 ============================ -->
+<article class="view" id="view-licao-6" data-view="licao-6" data-step="6" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 6 de 9</span><span class="tag">10 min</span><span class="tag status">Não lida</span></div>
+    <h1>Circuit breaker</h1>
+    <p class="lede">Parar de chamar um provedor que está falhando, e testar de tempos em tempos se ele voltou.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p>O <b>circuit breaker</b> conta as falhas seguidas de um provedor; passou de um limite, o gateway para de mandar requests para ele por um tempo.</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>O provedor devolve erro</dt>
+      <dd>Cada request ainda tenta o provedor caído antes de ir para outro, e paga o erro mais a espera (lição 5).</dd>
+      <dt>O provedor trava sem responder</dt>
+      <dd>Pior que devolver erro: cada request que cai nele espera o tempo limite inteiro antes de desistir.</dd>
+      <dt>O provedor está tentando se recuperar</dt>
+      <dd>Continuar mandando tráfego para um serviço sobrecarregado atrasa a recuperação dele.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p>A alternativa é um health check: chamar o provedor a cada X segundos para ver se está vivo. Ele demora até X segundos para perceber a queda e testa um endpoint de saúde, não o caminho real. O circuit breaker usa os próprios requests como sinal: percebe a falha no quinto erro seguido, sem tráfego extra.</p>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <p>Três estados por provedor:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Estado</th><th>O que acontece</th><th>Muda quando</th></tr></thead>
+      <tbody>
+        <tr><td>Fechado</td><td>Requests passam; o breaker conta as falhas seguidas</td><td>5 falhas seguidas: vai para aberto</td></tr>
+        <tr><td>Aberto</td><td>Nenhum request vai para o provedor</td><td>Passou o tempo de espera (2 s no experimento): vai para meio-aberto</td></tr>
+        <tr><td>Meio-aberto</td><td>Passa 1 request de teste</td><td>Sucesso: fechado. Falha: aberto de novo</td></tr>
+      </tbody>
+    </table></div>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/breaker.ts">src/gateway/breaker.ts</a>: as transições</figcaption><pre><code>failure() {
+  this.tick();
+  this.probeInFlight = false;
+  if (this.current === 'half-open') return this.open();   // o teste falhou
+  if (this.current === 'open') return;
+  this.failures++;
+  if (this.failures &gt;= this.options.failureThreshold) this.open();
+}
+
+success() {
+  this.failures = 0;
+  this.probeInFlight = false;
+  if (this.current !== 'closed') this.transition('closed');
+}</code></pre></figure>
+    <p>Um detalhe que importa: só conta como falha o que é culpa do provedor (erro <code>5xx</code>, tempo limite, conexão perdida). Um <code>400</code> é culpa do request, e um <code>429</code> é a cota: abrir o circuito por causa deles tiraria do ar um provedor saudável.</p>
+  </section>
+
+  <section>
+    <h2>O que o experimento mostrou</h2>
+    <p>Provedor devolvendo erro (o mesmo cenário das lições 4 e 5):</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Configuração</th><th>Erros</th><th>p50</th><th>p99</th><th>Chamadas ao caído</th></tr></thead>
+      <tbody>
+        <tr><td>Failover, sem circuit breaker</td><td class="num">0%</td><td class="num">206 ms</td><td class="num">303 ms</td><td class="num">1.196</td></tr>
+        <tr><td>Failover e circuit breaker</td><td class="num">0%</td><td class="num">104 ms</td><td class="num">115 ms</td><td class="num">8</td></tr>
+      </tbody>
+    </table></div>
+    <p>Provedor travado, que aceita a conexão e não responde. Tempo limite de 1 s por tentativa; 150 requests por segundo durante 15 s:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Configuração</th><th>p50</th><th>p99</th><th>Requests acima de 1 s</th></tr></thead>
+      <tbody>
+        <tr><td>Sem circuit breaker</td><td class="num">104 ms</td><td class="num">1.270 ms</td><td class="num">138</td></tr>
+        <tr><td>Com circuit breaker</td><td class="num">104 ms</td><td class="num">118 ms</td><td class="num">16</td></tr>
+      </tbody>
+    </table></div>
+    <p>Repare que a mediana é igual nas duas linhas: quem mostra o problema é o p99. Os 16 requests lentos que sobraram com o breaker são os que já esperavam no provedor travado antes de o circuito abrir, mais os requests de teste, um a cada poucos segundos.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>Com várias cópias do gateway, o estado do breaker deveria ficar no Redis?</b></p>
+    <p>Aqui ele fica na memória de cada cópia, e isso é uma escolha. Cada cópia descobre a queda sozinha, depois de 5 falhas dela; com 10 cópias, são 50 requests ruins em vez de 5. Em troca, o caminho do request não depende do Redis para decidir, e uma cópia com problema de rede não abre o circuito para todas.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-5"><small><kbd>←</kbd>Anterior</small><span>Failover, retry e backoff</span></a><a class="next" href="#licao-7"><small>Próxima<kbd>→</kbd></small><span>Fila e load shedding</span></a></nav>
+</article>
+
+
+<!-- ============================ LIÇÃO 7 ============================ -->
+<article class="view" id="view-licao-7" data-view="licao-7" data-step="7" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 7 de 9</span><span class="tag">10 min</span><span class="tag status">Não lida</span></div>
+    <h1>Fila com limite e load shedding</h1>
+    <p class="lede">Quantos requests cada provedor aguenta ao mesmo tempo, o que fazer com o excesso, e por que recusar rápido é melhor do que fazer esperar.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p>Cada provedor tem um número máximo de requests em andamento; quem chega depois espera numa <b>fila com tamanho e tempo máximos</b>, e o que não cabe é recusado na hora (<b>load shedding</b>).</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>O provedor tem limite de concorrência</dt>
+      <dd>Sua conta aceita, digamos, 50 requests simultâneos. O 51º recebe erro do provedor. É melhor o gateway segurar o 51º um pouco do que gastar uma chamada com erro garantido.</dd>
+      <dt>Chega um pico maior do que a capacidade</dt>
+      <dd>Uma fila sem limite cresce sem parar, a espera cresce junto, e o app desiste (tempo limite) depois que o gateway já gastou trabalho com o request.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p>Uma fila absorve picos curtos: 10 requests a mais por meio segundo esperam um pouco e passam. Mas sob excesso contínuo, uma fila só adia a falha. A regra que explica isso é a <b>lei de Little</b>: o número de itens num sistema é a taxa de chegada vezes o tempo que cada um fica lá.</p>
+    <p>Aplicada ao gateway: com 10 vagas e requests de 100 ms, o provedor atende no máximo 10 ÷ 0,1 s = 100 requests por segundo. Com 100 requests na fila, quem chega por último espera 100 ÷ 100 por segundo = 1 segundo antes de ser atendido. Uma fila de 10.000 seria uma espera de 100 segundos: ninguém espera isso. Por isso a fila tem tamanho e tempo máximos, e o excesso recebe <code>503</code> com <code>retry-after</code> imediatamente.</p>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <ol class="plain">
+      <li>Tem vaga livre? O request ocupa a vaga e segue.</li>
+      <li>Não tem vaga, mas a fila tem espaço? O request espera na fila.</li>
+      <li>A fila está cheia, ou o request esperou mais que o tempo máximo? Recusa com <code>503</code>.</li>
+      <li>Quando um request termina, a vaga passa direto para o primeiro da fila.</li>
+    </ol>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/limiter.ts">src/gateway/limiter.ts</a>: pedir uma vaga</figcaption><pre><code>acquire(signal?: AbortSignal): Promise&lt;() =&gt; void&gt; {
+  if (this.inFlight &lt; this.options.maxInFlight) {
+    this.inFlight++;
+    return Promise.resolve(this.releaser());
+  }
+  if (this.queue.length &gt;= this.options.maxQueue) return Promise.reject(new QueueFullError());
+  // senão: entra na fila, com um timer de maxWaitMs e o cancelamento do cliente ligados
+  ...
+}</code></pre></figure>
+    <p>A função devolvida libera a vaga, e ela é chamada num bloco <code>finally</code>: com sucesso, com erro ou com o cliente indo embora, a vaga sempre volta. Uma vaga que não volta é um vazamento que só aparece depois de horas, quando todas estão presas.</p>
+  </section>
+
+  <section>
+    <h2>O que o experimento mostrou</h2>
+    <p>No teste do tenant barulhento (lição 3), o provedor tinha 10 vagas, fila de 100 e espera máxima de 3 s, e recebia 300 requests por segundo. Sem rate limit:</p>
+    <div class="scroll"><table>
+      <thead><tr><th>O que aconteceu</th><th>Valor</th></tr></thead>
+      <tbody>
+        <tr><td>Requests do <code>acme</code> recusados com <code>503</code> pela fila</td><td class="num">3.435</td></tr>
+        <tr><td>Requests do <code>acme</code> atendidos</td><td class="num">1.665</td></tr>
+        <tr><td>Mediana do <code>beta</code>, que só mandava 20 por segundo</td><td class="num">1.137 ms</td></tr>
+      </tbody>
+    </table></div>
+    <p>Os 1.137 ms do <code>beta</code> são a lei de Little no número: cerca de 1 s de fila cheia mais os 100 ms do provedor. A fila protegeu o provedor, mas sozinha ela é justa com os requests, não com os tenants: quem manda mais ocupa mais a fila. Justiça entre tenants é trabalho do rate limit.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>Qual a diferença entre a fila e o rate limit, se os dois recusam requests?</b></p>
+    <p>O rate limit protege os tenants uns dos outros: é por tenant e olha o consumo ao longo do tempo. A fila protege o provedor: é por provedor e olha quantos requests estão em andamento agora. O experimento mostra os dois juntos: só a fila manteve o provedor de pé, mas só o rate limit devolveu o serviço ao <code>beta</code>.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-6"><small><kbd>←</kbd>Anterior</small><span>Circuit breaker</span></a><a class="next" href="#licao-8"><small>Próxima<kbd>→</kbd></small><span>Cache de respostas</span></a></nav>
+</article>
+
+<!-- ============================ LIÇÃO 8 ============================ -->
+<article class="view" id="view-licao-8" data-view="licao-8" data-step="8" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 8 de 9</span><span class="tag">10 min</span><span class="tag status">Não lida</span></div>
+    <h1>Cache de respostas</h1>
+    <p class="lede">Responder a mesma pergunta sem chamar o modelo de novo, sem misturar clientes e sem deixar 10 requests iguais virarem 10 chamadas.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p>O <b>cache</b> guarda a resposta de um request por um tempo; o mesmo request, do mesmo tenant, recebe a resposta guardada sem ir ao provedor.</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>Perguntas que se repetem</dt>
+      <dd>Um assistente de FAQ recebe "qual o horário de atendimento?" centenas de vezes por dia, com a mesma configuração. Cada chamada custa tokens e leva segundos.</dd>
+      <dt>Um pico de requests iguais</dt>
+      <dd>Uma tela popular abre e 10 usuários disparam a mesma geração no mesmo segundo, antes da primeira terminar.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p>Três decisões do projeto, cada uma contra um erro comum:</p>
+    <ul class="plain">
+      <li><b>Só quando o cliente pede</b>, pelo header <code>x-gateway-cache: 60</code> (segundos de validade). Quem chama é que sabe se a resposta pode ser reaproveitada: uma FAQ pode, uma conversa com o contexto do usuário não pode.</li>
+      <li><b>O tenant faz parte da chave.</b> A resposta de um tenant nunca é entregue a outro, mesmo que a pergunta seja idêntica.</li>
+      <li><b>Uma chamada para requests iguais simultâneos</b> (<i>single-flight</i>). Sem isso, os 10 requests do pico chegam antes da primeira resposta existir, todos encontram o cache vazio, e todos vão ao provedor.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <p>A chave do cache é um hash do tenant com o corpo do request, com as chaves do JSON em ordem alfabética: <code>{"a":1,"b":2}</code> e <code>{"b":2,"a":1}</code> são o mesmo request. O campo <code>stream</code> fica de fora, porque a resposta é a mesma; só muda o formato de entrega.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/cache.ts">src/gateway/cache.ts</a>: a chave</figcaption><pre><code>export function cacheKey(tenant: string, body: Record&lt;string, unknown&gt;): string {
+  const { stream: _stream, ...rest } = body;
+  return `cache:${createHash('sha256').update(`${tenant}\n${stableStringify(rest)}`).digest('hex')}`;
+}</code></pre></figure>
+    <p>O single-flight é um mapa de chamadas em andamento: o primeiro request de uma chave registra uma Promise; os seguintes, em vez de chamar o provedor, esperam essa Promise.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/server.ts">src/gateway/server.ts</a>: single-flight</figcaption><pre><code>let cached = await responses.get(flightKey);
+const pending = cached === null ? inProgress.get(flightKey) : undefined;
+if (pending) cached = await pending;       // alguém já está buscando: espera a resposta dele
+// ...
+if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) =&gt; (settleFlight = resolve)));</code></pre></figure>
+    <p>Só entram no cache respostas completas e com sucesso. Um erro do provedor, ou um streaming cancelado no meio, não é guardado.</p>
+  </section>
+
+  <section>
+    <h2>O que o experimento mostrou</h2>
+    <p>1.000 requests, 10 ao mesmo tempo; 30% deles repetem uma de 10 perguntas frequentes. Esses 30% são uma premissa do teste, não um dado do mundo real.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Configuração</th><th>Chamadas ao provedor</th><th>Respostas do cache</th><th>Custo</th><th>Latência média</th></tr></thead>
+      <tbody>
+        <tr><td>Sem cache</td><td class="num">1.000</td><td class="num">0%</td><td class="num">US$ 0,159</td><td class="num">105 ms</td></tr>
+        <tr><td>Com cache</td><td class="num">689</td><td class="num">31,1%</td><td class="num">US$ 0,110</td><td class="num">73 ms</td></tr>
+      </tbody>
+    </table></div>
+    <p>O cache respondeu 31,1%, praticamente toda a repetição que existia. O que o teste prova é que o mecanismo funciona sob concorrência; a economia real depende de quanto o seu tráfego se repete.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>O que é cache stampede e como evitar?</b></p>
+    <p>É quando uma entrada do cache não existe (ou expira) e muitos requests ao mesmo tempo vão buscar o mesmo valor na origem. Com LLM, cada busca é cara. A solução do projeto é single-flight: só o primeiro busca, os outros esperam o resultado dele.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-7"><small><kbd>←</kbd>Anterior</small><span>Fila e load shedding</span></a><a class="next" href="#licao-9"><small>Próxima<kbd>→</kbd></small><span>Métricas e teste de carga</span></a></nav>
+</article>
+
+<!-- ============================ LIÇÃO 9 ============================ -->
+<article class="view" id="view-licao-9" data-view="licao-9" data-step="9" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Lição 9 de 9</span><span class="tag">15 min</span><span class="tag status">Não lida</span></div>
+    <h1>Métricas e teste de carga</h1>
+    <p class="lede">Como saber se cada mecanismo funciona: o que registrar de cada request, por que olhar o p99 e como gerar carga sem enganar a si mesmo.</p>
+  </header>
+
+  <section>
+    <h2>Em uma frase</h2>
+    <p><b>Observabilidade</b> é conseguir responder perguntas sobre o sistema em produção a partir do que ele registra; <b>teste de carga</b> é gerar tráfego controlado para medir como ele se comporta.</p>
+  </section>
+
+  <section class="why">
+    <h2>Quando você precisa</h2>
+    <dl>
+      <dt>Explicar a fatura</dt>
+      <dd>"Quanto o tenant X gastou este mês?" só tem resposta se cada request registrou o tenant, os tokens e o custo.</dd>
+      <dt>Decidir uma configuração</dt>
+      <dd>"5 falhas para abrir o circuito é muito ou pouco?" só tem resposta medindo o efeito.</dd>
+      <dt>Defender o projeto numa entrevista</dt>
+      <dd>"O circuit breaker baixou o p99 de 1.270 ms para 118 ms" vale mais do que "implementei um circuit breaker".</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Por que é a escolha comum</h2>
+    <p><b>Uma linha de log por request, em JSON</b> (formato JSONL). Cada linha tem tudo sobre aquele request; qualquer pergunta vira um filtro e uma soma. É o formato que ferramentas como Datadog, Loki e BigQuery leem direto.</p>
+    <p><b>Percentis, não média.</b> A média esconde a cauda: no experimento do provedor travado (lição 6), a mediana era 104 ms com e sem circuit breaker. Só o p99 mostrava que 138 requests passavam de 1 segundo. Um usuário que usa o produto o dia todo encontra o p99 várias vezes por dia.</p>
+  </section>
+
+  <section>
+    <h2>Como funciona</h2>
+    <figure class="code"><figcaption>uma linha do log, <code>logs/requests.jsonl</code></figcaption><pre><code>{"ts":"2026-11-18T20:44:21.895Z","id":"gw_eb0a1457","tenant":"acme","upstream":"mock-a","status":200,
+ "ms":704,"stream":false,"inputTokens":20,"outputTokens":10,"costUsd":0.00021,
+ "attempts":[{"upstream":"mock-a","status":200,"ms":704}],"model":"mock-1","queueMs":0}</code></pre></figure>
+    <p>O campo <code>attempts</code> guarda cada tentativa: um request que passou por failover mostra o provedor que falhou, o erro e o que respondeu.</p>
+    <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/report.ts">src/report.ts</a>: percentil por posto mais próximo</figcaption><pre><code>export function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) =&gt; a - b);
+  return sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)]!;
+}</code></pre></figure>
+    <p>No teste de carga, há dois jeitos de gerar tráfego, e eles respondem perguntas diferentes:</p>
+    <ul class="plain">
+      <li><b>Concorrência fixa:</b> N clientes, cada um manda o próximo request quando o anterior termina. Mede a vazão máxima. Se o sistema fica lento, os clientes mandam menos, e a carga cai junto: o teste alivia o sistema justamente quando ele piora.</li>
+      <li><b>Taxa fixa:</b> um request a cada 1/taxa segundos, termine o anterior ou não. É como usuários de verdade chegam. Mostra a fila crescendo e a latência subindo sob excesso.</li>
+    </ul>
+    <p>Os experimentos de queda e de tenant barulhento usam taxa fixa; os de custo do gateway e de cache usam concorrência fixa.</p>
+  </section>
+
+  <section>
+    <h2>Os números de todas as lições</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Mecanismo</th><th>Desligado</th><th>Ligado</th><th>Lição</th></tr></thead>
+      <tbody>
+        <tr><td>Passar pelo gateway (p50)</td><td class="num">102,9 ms</td><td class="num">103,9 ms</td><td><a href="#licao-1">1</a></td></tr>
+        <tr><td>Primeiro pedaço do streaming (p50)</td><td class="num">202 ms</td><td class="num">203 ms</td><td><a href="#licao-2">2</a></td></tr>
+        <tr><td>Rate limit: erros do tenant vizinho</td><td class="num">75,1%</td><td class="num">0%</td><td><a href="#licao-3">3</a></td></tr>
+        <tr><td>Failover: erros com um provedor caído</td><td class="num">87,2%</td><td class="num">0%</td><td><a href="#licao-5">5</a></td></tr>
+        <tr><td>Circuit breaker: p99 com provedor travado</td><td class="num">1.270 ms</td><td class="num">118 ms</td><td><a href="#licao-6">6</a></td></tr>
+        <tr><td>Cache: chamadas ao provedor</td><td class="num">1.000</td><td class="num">689</td><td><a href="#licao-8">8</a></td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Tudo na mesma máquina (2 núcleos), com provedores falsos de latência fixa. Os números mostram o efeito de cada mecanismo, não o desempenho com uma API real.</p>
+  </section>
+
+  <section>
+    <h2>Pergunta de entrevista</h2>
+    <p><b>Por que o teste de carga com N clientes fixos pode esconder um problema?</b></p>
+    <p>Porque cada cliente espera a resposta antes de mandar o próximo. Quando o sistema fica lento, a carga cai sozinha, e o teste nunca vê a fila crescer. Usuários reais não esperam os outros terminarem para chegar. Para medir comportamento sob excesso, a carga tem que ter taxa fixa.</p>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-8"><small><kbd>←</kbd>Anterior</small><span>Cache de respostas</span></a><a class="next" href="#entrevista"><small>Próxima<kbd>→</kbd></small><span>Perguntas de entrevista</span></a></nav>
+</article>
+
+<!-- ============================ ENTREVISTA ============================ -->
+<article class="view" id="view-entrevista" data-view="entrevista" hidden>
+  <header>
+    <div class="eyebrow"><span class="tag">Revisão</span><span class="tag">10 min</span></div>
+    <h1>Perguntas de entrevista</h1>
+    <p class="lede">As perguntas que costumam aparecer sobre um sistema como este, com a resposta curta e a lição que explica cada uma.</p>
+  </header>
+
+  <section>
+    <h2>Desenho geral</h2>
+    <div class="qa">
+      <details><summary>Desenhe um gateway para várias APIs de LLM.</summary><p>Um proxy reverso com estas paradas, nesta ordem: autenticação, cache, rate limit por tenant, balanceador com circuit breaker, fila por provedor e a chamada com streaming. O estado compartilhado (cota e cache) fica no Redis; o resto, na memória de cada cópia. Uma linha de log por request. Lições <a href="#licao-1">1</a> e <a href="#licao-9">9</a>.</p></details>
+      <details><summary>Como escalar para várias cópias do gateway?</summary><p>As cópias ficam atrás de um load balancer comum, sem estado próprio que importe entre requests. Cota e cache vão para o Redis, para todas verem o mesmo saldo e as mesmas respostas. O circuit breaker e a fila ficam por cópia, de propósito. Lições <a href="#licao-3">3</a> e <a href="#licao-6">6</a>.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Limites e filas</h2>
+    <div class="qa">
+      <details><summary>Por que rate limit por tokens, e não por requests?</summary><p>O custo de um request de LLM varia centenas de vezes com o tamanho do texto. O gateway reserva uma estimativa na entrada e devolve a diferença quando sabe o uso real. <a href="#licao-3">Lição 3</a>.</p></details>
+      <details><summary>O que acontece se o Redis cair?</summary><p>O gateway deixa os requests passarem sem limite (fail open), em vez de derrubar todos os tenants. Se estourar a cota custasse mais do que ficar fora do ar, a escolha seria recusar (fail closed). <a href="#licao-3">Lição 3</a>.</p></details>
+      <details><summary>Como garantir que duas cópias não aprovem o mesmo saldo?</summary><p>Ler, calcular e gravar o saldo num script Lua, que o Redis executa inteiro antes de atender outro comando. Três comandos separados teriam uma corrida entre as cópias. <a href="#licao-3">Lição 3</a>.</p></details>
+      <details><summary>Por que a fila tem tamanho máximo?</summary><p>Pela lei de Little, a espera é o tamanho da fila dividido pela vazão. Uma fila sem limite sob excesso contínuo só faz a espera crescer até o cliente desistir. Melhor recusar com <code>503</code> na hora. <a href="#licao-7">Lição 7</a>.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Falhas</h2>
+    <div class="qa">
+      <details><summary>Quais erros merecem nova tentativa?</summary><p>Os do provedor: falha de conexão, tempo limite, <code>429</code>, <code>529</code> e <code>5xx</code>. Os do request (<code>400</code>, <code>401</code>) não: outro provedor daria a mesma resposta. <a href="#licao-5">Lição 5</a>.</p></details>
+      <details><summary>Por que jitter no backoff?</summary><p>Para que os clientes que falharam juntos não tentem de novo todos no mesmo instante e derrubem o servidor que está se recuperando. <a href="#licao-5">Lição 5</a>.</p></details>
+      <details><summary>Dá para trocar de provedor no meio de um streaming?</summary><p>Não: o cliente já recebeu parte do texto, e recomeçar em outro provedor duplicaria a resposta. Depois do primeiro byte, uma falha vira um evento de erro no próprio stream. <a href="#licao-5">Lição 5</a>.</p></details>
+      <details><summary>Por que least-in-flight piorou com um provedor caído?</summary><p>O provedor caído responde o erro quase na hora, então quase nunca tem request em andamento e sempre parece o mais livre. No experimento, os erros foram de 33,3% (rodízio) para 87,2%. <a href="#licao-4">Lição 4</a>.</p></details>
+      <details><summary>Circuit breaker ou health check?</summary><p>O circuit breaker usa os próprios requests como sinal e percebe a queda na quinta falha seguida, sem tráfego extra; o health check testa um endpoint de saúde a cada intervalo. Os dois podem conviver. <a href="#licao-6">Lição 6</a>.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Desempenho</h2>
+    <div class="qa">
+      <details><summary>O que é backpressure?</summary><p>É quem recebe mais devagar controlar a velocidade de quem manda. No gateway: quando <code>res.write()</code> devolve <code>false</code>, ele para de ler do provedor até o evento <code>drain</code>. <a href="#licao-2">Lição 2</a>.</p></details>
+      <details><summary>Por que olhar o p99, e não a média?</summary><p>A média esconde a cauda. Com um provedor travado, a mediana ficou em 104 ms com e sem circuit breaker; só o p99 (1.270 ms contra 118 ms) mostrou o problema. <a href="#licao-9">Lição 9</a>.</p></details>
+      <details><summary>O que é cache stampede?</summary><p>Muitos requests buscando o mesmo valor ausente ao mesmo tempo. A solução é single-flight: só o primeiro vai ao provedor, os outros esperam a resposta dele. <a href="#licao-8">Lição 8</a>.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <h2>Para ir além</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Lição</th><th>Fonte</th></tr></thead>
+      <tbody>
+        <tr><td class="num">2</td><td><a href="https://platform.claude.com/docs/en/build-with-claude/streaming">Streaming da API de mensagens</a></td></tr>
+        <tr><td class="num">2</td><td><a href="https://nodejs.org/learn/modules/backpressuring-in-streams">Node.js: backpressure em streams</a></td></tr>
+        <tr><td class="num">3</td><td><a href="https://redis.io/docs/latest/develop/use-cases/rate-limiter/nodejs/">Redis: token bucket com Node.js</a></td></tr>
+        <tr><td class="num">5</td><td><a href="https://platform.claude.com/docs/en/api/errors">Erros da API de mensagens</a></td></tr>
+        <tr><td class="num">6</td><td><a href="https://martinfowler.com/bliki/CircuitBreaker.html">Martin Fowler: CircuitBreaker</a></td></tr>
+        <tr><td class="num">Todas</td><td><a href="https://github.com/nicomsz/llm-gateway">O código do projeto, com testes e experimentos</a></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-9"><small><kbd>←</kbd>Anterior</small><span>Métricas e teste de carga</span></a></nav>
+</article>
+
+<footer class="foot">
+  <span>Código: <a href="https://github.com/nicomsz/llm-gateway">github.com/nicomsz/llm-gateway</a>. Por <a href="https://nicomsz.com">Nicolas Moraes de Souza</a>.</span>
+  <button id="reset" type="button">Zerar progresso</button>
+</footer>
+</main>
+
+<script>
+(function () {
+  var KEY = 'llm-gateway-licoes-v1';
+  var views = Array.prototype.slice.call(document.querySelectorAll('[data-view]'));
+  var order = views.map(function (v) { return v.getAttribute('data-view'); });
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-nav]'));
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type="checkbox"][id]'));
+  var state = {};
+
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var LABEL = { none: 'Não lida', partial: 'Lendo', done: 'Lida' };
+
+  // uma lição conta como lida quando a pessoa rola a página dela até o fim (a navegação "anterior / próxima" entra na tela)
+  var reached = {}, skip = {}, watched = null;
+  var io = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      var view = en.target.closest('[data-view]');
+      var n = view.getAttribute('data-step');
+      if (!n || view.hidden) return;
+      if (!en.isIntersecting) { reached[n] = true; return; }      // o fim estava fora da tela: agora vale rolar até ele
+      if (reached[n] && !skip[n] && !state['seen-' + n]) { state['seen-' + n] = 1; save(); refresh(); }
+    });
+  }) : null;
+  function watch(view) {
+    if (!io) return;
+    if (watched) io.unobserve(watched);
+    watched = null;
+    var n = view.getAttribute('data-step');
+    if (!n) return;
+    reached[n] = false; skip[n] = false;
+    watched = view.querySelector('.pager');
+    io.observe(watched);
+  }
+
+  // linha "Lição lida", com o link para a próxima e o desfazer
+  views.forEach(function (view) {
+    var n = Number(view.getAttribute('data-step'));
+    if (!n) return;
+    var p = document.createElement('p');
+    p.className = 'done-msg';
+    var a = document.createElement('a');
+    a.href = n < 9 ? '#licao-' + (n + 1) : '#entrevista';
+    a.textContent = n < 9 ? 'Ir para a lição ' + (n + 1) : 'Revisar com as perguntas de entrevista';
+    var undo = document.createElement('button');
+    undo.type = 'button';
+    undo.textContent = 'Marcar como não lida';
+    undo.addEventListener('click', function () { delete state['seen-' + n]; skip[n] = true; save(); refresh(); });
+    p.appendChild(document.createTextNode('Lição lida.'));
+    p.appendChild(a); p.appendChild(undo);
+    view.insertBefore(p, view.querySelector('.pager'));
+  });
+
+  function stepStatus(view) {
+    if (state['seen-' + view.getAttribute('data-step')]) return 'done';
+    var all = view.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < all.length; i++) if (all[i].checked) return 'partial';
+    return 'none';
+  }
+
+  function refresh() {
+    var doneCount = 0;
+    views.forEach(function (view) {
+      var n = view.getAttribute('data-step');
+      if (!n) return;
+      var s = stepStatus(view);
+      if (s === 'done') doneCount++;
+      view.classList.toggle('is-done', s === 'done');
+      var node = document.querySelector('.route [data-nav="licao-' + n + '"]');
+      node.setAttribute('data-s', s);
+      node.querySelector('.dot').textContent = s === 'done' ? '✓' : n;
+      var row = document.querySelector('[data-idx="' + n + '"]');
+      if (row) row.setAttribute('data-s', s);
+      var pill = view.querySelector('.status');
+      pill.setAttribute('data-s', s);
+      pill.textContent = LABEL[s];
+    });
+    var bar = document.getElementById('loadbar');
+    Array.prototype.forEach.call(bar.children, function (chunk, i) { chunk.className = i < doneCount ? 'on' : ''; });
+    bar.setAttribute('aria-valuenow', doneCount);
+    bar.title = doneCount + ' de 9 lições lidas';
+  }
+
+  boxes.forEach(function (box) {
+    box.checked = !!state[box.id];
+    box.addEventListener('change', function () {
+      if (box.checked) state[box.id] = 1; else delete state[box.id];
+      save(); refresh();
+    });
+  });
+
+  // rotas: uma etapa por vez, pelo #hash
+  function current() {
+    var id = (location.hash || '#visao-geral').slice(1);
+    return order.indexOf(id) >= 0 ? id : order[0];
+  }
+  function route(first) {
+    var id = current();
+    views.forEach(function (v) {
+      var on = v.getAttribute('data-view') === id;
+      v.hidden = !on;
+      v.classList.remove('enter');
+      if (on && !first) { void v.offsetWidth; v.classList.add('enter'); }
+    });
+    navLinks.forEach(function (a) {
+      if (a.getAttribute('data-nav') === id) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    if (!first) window.scrollTo(0, 0);
+    watch(views[order.indexOf(id)]);
+  }
+  window.addEventListener('hashchange', function () { route(false); });
+
+  // setas do teclado: etapa anterior e próxima
+  document.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    var t = e.target && e.target.tagName;
+    if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+    var i = order.indexOf(current()) + (e.key === 'ArrowRight' ? 1 : -1);
+    if (i < 0 || i >= order.length) return;
+    location.hash = order[i];
+  });
+
+  // copiar código e termos de busca
+  function copy(text, btn, restore) {
+    var done = function () { btn.textContent = 'Copiado'; setTimeout(function () { btn.textContent = restore; }, 1400); };
+    try { navigator.clipboard.writeText(text).then(done, function () { btn.textContent = 'Selecione e copie'; }); }
+    catch (e) { btn.textContent = 'Selecione e copie'; }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.code'), function (fig) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'copy'; b.textContent = 'Copiar';
+    b.addEventListener('click', function () { copy(fig.querySelector('pre').innerText, b, 'Copiar'); });
+    fig.appendChild(b);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (chip) {
+    var term = chip.textContent;
+    chip.title = 'Copiar termo de busca';
+    chip.addEventListener('click', function () { copy(term, chip, term); });
+  });
+
+  // zerar progresso, com confirmação em dois cliques
+  var reset = document.getElementById('reset'), armed = false, timer;
+  reset.addEventListener('click', function () {
+    if (!armed) {
+      armed = true; reset.textContent = 'Clique de novo para confirmar';
+      timer = setTimeout(function () { armed = false; reset.textContent = 'Zerar progresso'; }, 4000);
+      return;
+    }
+    clearTimeout(timer); armed = false; reset.textContent = 'Zerar progresso';
+    state = {}; save();
+    var cur = views[order.indexOf(current())].getAttribute('data-step');
+    if (cur) skip[cur] = true;
+    boxes.forEach(function (b) { b.checked = false; });
+    refresh();
+  });
+
+  refresh(); route(true);
+})();
+</script>
+</body>
+</html>

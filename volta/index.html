@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Volta: lembrete de vacina pelo WhatsApp da clínica</title>
+<meta name="description" content="Quando a vacina, o vermífugo ou o retorno está perto de vencer, o tutor recebe uma mensagem no WhatsApp, enviada do número da clínica veterinária.">
+<meta property="og:title" content="Volta: o lembrete de vacina sai sozinho">
+<meta property="og:description" content="Lembrete de vacina, vermífugo e retorno pelo WhatsApp da clínica veterinária.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M14 4h20a12 12 0 0 1 12 12v14a12 12 0 0 1-12 12H19l-9.4 5.2a1.6 1.6 0 0 1-2.4-1.5L8 38.6A12 12 0 0 1 2 28V16A12 12 0 0 1 14 4z' fill='%2312a05c'/%3E%3Cpath d='M32.5 23a8.5 8.5 0 1 1-3-6.5' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M30.3 11.4v5.9h-5.9' fill='none' stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,400..700&display=swap">
+<style>
+/* Marca: branco, verde e azul. Uma família só (Google Sans Flex); as mensagens de WhatsApp
+   usam a fonte do aparelho, como no aplicativo. */
+:root{
+  color-scheme:light;
+  --bg:#ffffff;
+  --paper:#f3f8f5;
+  --mist:#eef4f1;
+  --ink:#0d2b2a;
+  --ink-2:#47605e;
+  --ink-3:#5a7270;
+  --line:#dde8e3;
+  --green:#12a05c;
+  --green-deep:#0b7d47;
+  --green-soft:#ddf3e7;
+  --blue:#1f6fe5;
+  --blue-deep:#1553b3;
+  --blue-soft:#e6f0fe;
+  --bubble-out:#d9f4e4;
+  --sans:"Google Sans Flex",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --chat:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+}
+@supports (transition-timing-function:linear(0,1)){
+  :root{--spring:linear(0,.009,.035 2.1%,.141,.281 6.7%,.723 12.9%,.938 16.7%,1.017,1.077,1.121,1.149 24.3%,1.159,1.163,1.161,1.154 29.9%,1.129 32.8%,1.051 39.6%,1.017 43.1%,.991,.977 51%,.974 53.8%,.975 57.1%,.997 69.8%,1.003 76.9%,1.004 83.8%,1)}
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:18px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:clip}
+h1,h2,h3,p{margin:0}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.wrap{max-width:1180px;margin-inline:auto;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+@media (min-width:720px){.wrap{padding-left:max(32px,env(safe-area-inset-left,0px));padding-right:max(32px,env(safe-area-inset-right,0px))}}
+.skip{position:absolute;left:12px;top:-60px;z-index:70;padding:10px 14px;border-radius:10px;background:var(--ink);color:#fff;text-decoration:none}
+.skip:focus{top:12px}
+
+/* Navegação: cápsula flutuante */
+.nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:50;padding-block:8px;pointer-events:none}
+.nav-pill{pointer-events:auto;display:flex;align-items:center;gap:6px;width:fit-content;margin-inline:auto;padding:6px 6px 6px 16px;border-radius:999px;background:rgba(255,255,255,.86);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);border:1px solid var(--line);box-shadow:0 12px 32px -22px rgba(13,43,42,.5)}
+.brand{display:flex;align-items:center;gap:8px;margin-right:6px;font-size:1.3rem;font-weight:600;letter-spacing:-.015em;line-height:1;text-decoration:none}
+.brand svg{width:26px;height:26px}
+.nav-links{display:none;gap:2px;margin-right:6px}
+.nav-links a{padding:10px 12px;border-radius:999px;font-size:.95rem;font-weight:500;color:var(--ink-2);text-decoration:none}
+.nav-links a:hover{background:var(--mist);color:var(--ink)}
+@media (min-width:720px){.nav-links{display:flex}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:999px;border:0;background:var(--green-deep);color:#fff;font:600 1rem/1 var(--sans);text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .2s,transform .2s}
+.btn:hover{background:#086538}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:15px;height:15px;flex:none}
+.btn.sm{min-height:44px;padding:0 18px;font-size:.95rem}
+.btn.light{background:#fff;color:var(--blue-deep)}
+.btn.light:hover{background:var(--blue-soft)}
+
+/* Herói */
+.hero{position:relative;padding-block:clamp(28px,6vw,80px) clamp(40px,6vw,88px)}
+.hero::before{content:"";position:absolute;inset:-120px 0 0;z-index:-1;background:
+  radial-gradient(60% 55% at 85% 30%,var(--green-soft),transparent 70%),
+  radial-gradient(40% 40% at 70% 85%,var(--blue-soft),transparent 70%)}
+.hero-grid{display:grid;gap:48px;align-items:center}
+@media (min-width:960px){.hero-grid{grid-template-columns:1.1fr .9fr;gap:64px}}
+.kicker{display:inline-flex;align-items:center;gap:8px;margin-bottom:22px;padding:6px 12px 6px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:.9rem;font-weight:500;color:var(--ink-2)}
+.kicker i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px var(--green-soft)}
+h1{font-weight:520;font-size:clamp(2.5rem,6.6vw,4.9rem);line-height:1.03;letter-spacing:-.028em;text-wrap:balance}
+h1 em,h2 em{font-style:normal;font-weight:inherit;color:var(--green-deep)}
+.lede{margin-top:22px;max-width:31em;font-size:clamp(1.125rem,1.6vw,1.25rem);color:var(--ink-2);text-wrap:pretty}
+.hero-cta{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin-top:32px}
+.hero-cta a.link{font-weight:600;color:var(--ink-2);text-decoration-thickness:1px;text-underline-offset:4px}
+
+/* Conversa de exemplo */
+.phone{position:relative;width:100%;max-width:400px;margin-inline:auto;font-family:var(--chat);border-radius:40px;background:#fff;border:1px solid var(--line);box-shadow:0 40px 80px -48px rgba(13,43,42,.55),0 2px 0 rgba(13,43,42,.04);overflow:hidden}
+.phone-top{display:flex;align-items:center;gap:12px;padding:18px 18px 16px;border-bottom:1px solid var(--line)}
+.avatar{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--blue-soft);color:var(--blue-deep);font-weight:700;font-size:.92rem}
+.phone-top strong{display:block;font-size:1rem;line-height:1.25}
+.phone-top small{font-size:.84rem;color:var(--ink-3)}
+.chat{display:flex;flex-direction:column;gap:10px;min-height:330px;padding:18px 14px 22px;background:var(--paper)}
+.day{align-self:center;margin-bottom:4px;padding:4px 10px;border-radius:8px;background:#fff;font-size:.78rem;color:var(--ink-3)}
+.msg{max-width:86%;padding:10px 14px 8px;border-radius:18px;font-size:1rem;line-height:1.42;box-shadow:0 1px 1px rgba(13,43,42,.08)}
+.msg time{display:block;margin-top:2px;text-align:right;font-size:.75rem;color:var(--ink-3)}
+.msg.out{align-self:flex-end;background:var(--bubble-out);border-bottom-right-radius:6px}
+.msg.in{align-self:flex-start;background:#fff;border-bottom-left-radius:6px}
+.slot{display:grid}
+.slot>*{grid-area:1/1;justify-self:start;align-self:start}
+.typing{display:inline-flex;gap:5px;padding:14px 16px;border-radius:18px 18px 18px 6px;background:#fff;opacity:0}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{opacity:0}14%,86%{opacity:1}}
+@keyframes dot{0%,60%,100%{transform:none;opacity:.45}30%{transform:translateY(-4px);opacity:1}}
+@media (prefers-reduced-motion:no-preference){
+  .play .m1{animation:pop .5s .3s both}
+  .play .typing{animation:blink 1.5s 1.7s both}
+  .play .typing i{animation:dot 1s 5}
+  .play .typing i:nth-child(2){animation-delay:.15s}
+  .play .typing i:nth-child(3){animation-delay:.3s}
+  .play .m3{animation:pop .5s 3.2s both}
+  .play .m4{animation:pop .5s 4.6s both}
+}
+
+/* Seções */
+section{scroll-margin-top:96px}
+.sec{padding-block:clamp(64px,9vw,120px)}
+.sec.tint{background:var(--paper)}
+h2{font-weight:520;font-size:clamp(2rem,4.4vw,3.3rem);line-height:1.08;letter-spacing:-.022em;text-wrap:balance}
+.sec-head{display:grid;gap:16px;max-width:760px;margin-bottom:clamp(32px,4vw,52px)}
+.sec-head p{max-width:34em;font-size:1.125rem;color:var(--ink-2);text-wrap:pretty}
+
+
+/* Como funciona: a conversa em passos */
+.talk{display:grid;gap:clamp(28px,5vw,48px)}
+.talk .sec-head{margin:0}
+@media (min-width:900px){
+  .talk{grid-template-columns:.8fr 1.2fr;gap:64px;align-items:start}
+  .talk .sec-head{position:sticky;top:120px}
+}
+.thread{position:relative;display:grid;gap:clamp(48px,8vw,104px);margin:0;padding:4px 0 12px;list-style:none}
+.thread::before,.thread::after{content:"";position:absolute;left:19px;top:0;bottom:0;width:2px;border-radius:2px;background:var(--line)}
+.thread::after{display:none;background:var(--green);transform-origin:50% 0}
+.beat{display:grid;grid-template-columns:40px minmax(0,1fr);gap:14px 16px}
+.beat .n{position:relative;z-index:1;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:2px solid var(--line);background:#fff;font-weight:700;font-size:.92rem;color:var(--ink-2)}
+.beat .n::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--green)}
+.beat h3{align-self:center;font-size:1.2rem;font-weight:600;letter-spacing:-.01em}
+.beat>.slot,.beat>.bub{grid-column:2}
+.bub{justify-self:start;max-width:min(100%,29em);padding:.72em 1em .68em;font-family:var(--chat);border:1px solid var(--line);border-radius:1.3em 1.3em 1.3em .4em;background:#fff;font-size:clamp(1.05rem,1.8vw,1.4rem);line-height:1.36;box-shadow:0 18px 34px -26px rgba(13,43,42,.55);transform-origin:0 100%}
+.bub.out{justify-self:end;border-color:transparent;border-radius:1.3em 1.3em .4em 1.3em;background:var(--bubble-out);transform-origin:100% 100%}
+.bub.note{background:var(--green-deep);border-color:transparent;color:#fff;font-family:var(--sans)}
+.beat .typing{border:1px solid var(--line)}
+
+/* O painel da clínica */
+.board{border:1px solid var(--line);border-radius:28px;background:#fff;box-shadow:0 40px 80px -60px rgba(13,43,42,.55);overflow:hidden}
+.board-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:18px clamp(16px,3vw,28px);border-bottom:1px solid var(--line)}
+.board-top strong{display:block;font-size:1.1rem}
+.board-top small{color:var(--ink-3);font-size:.9rem}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.filters button{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-2);font:500 .9rem/1 var(--sans);cursor:pointer}
+.filters button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:#fff}
+.filters button span{margin-left:6px;opacity:.7}
+.rows{margin:0;padding:0;list-style:none}
+.row{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:4px 14px;padding:16px clamp(16px,3vw,28px);border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row[hidden]{display:none}
+.pet{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--mist);font-weight:700;color:var(--ink-2)}
+.who strong{display:block;font-size:1rem;line-height:1.3}
+.who span{font-size:.92rem;color:var(--ink-3)}
+.what{grid-column:2;font-size:.92rem;color:var(--ink-2)}
+.chip{grid-column:2;justify-self:start;margin-top:6px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:.86rem;font-weight:600;white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.chip.ok{background:var(--green-soft);color:var(--green-deep)}
+.chip.reply{background:var(--blue-soft);color:var(--blue-deep)}
+.chip.wait{background:var(--mist);color:var(--ink-3)}
+.chip.again{background:#fff;color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line)}
+@media (min-width:760px){
+  .row{grid-template-columns:40px minmax(0,1.1fr) minmax(0,1fr) auto}
+  .what{grid-column:3}
+  .chip{grid-column:4;justify-self:end;margin-top:0}
+}
+.board-note{margin-top:16px;font-size:.92rem;color:var(--ink-3)}
+
+/* Dúvidas */
+.faq-grid{display:grid;gap:28px}
+@media (min-width:900px){
+  .faq-grid{grid-template-columns:.8fr 1.2fr;gap:64px;align-items:start}
+  .faq-grid .sec-head{position:sticky;top:120px;margin:0}
+}
+details{border-top:1px solid var(--line)}
+details:last-child{border-bottom:1px solid var(--line)}
+summary{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:44px;padding:18px 0;list-style:none;cursor:pointer;font-weight:600;font-size:1.125rem}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";flex:none;width:11px;height:11px;margin-right:4px;border-right:2px solid var(--blue);border-bottom:2px solid var(--blue);transform:translateY(-3px) rotate(45deg);transition:transform .2s}
+details[open] summary::after{transform:translateY(3px) rotate(225deg)}
+details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
+
+/* Fechamento */
+.band{background:var(--blue-deep);color:#fff;padding-block:clamp(72px,10vw,128px)}
+.band-in{display:grid;gap:20px;justify-items:start}
+.band p{max-width:30em;font-size:1.15rem;color:#dce8fb}
+.band .btn{margin-top:12px}
+
+.legal{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;padding-block:24px 28px;font-size:.88rem;color:var(--ink-3)}
+.legal a{text-underline-offset:3px}
+
+/* Animações no scroll: só transform e opacity. A classe .anim só entra pelo script,
+   então sem JS ou com "reduzir movimento" a página aparece inteira e parada. */
+.anim .rv{opacity:0;transform:translate3d(0,26px,0);transition:opacity .18s linear,transform .18s ease-in}
+.anim .rv.on{opacity:1;transform:none;transition:opacity .5s linear var(--d,0ms),transform .8s var(--ease) var(--d,0ms)}
+.anim .pop{opacity:0;transform:translate3d(0,30px,0) scale(.5);will-change:transform,opacity;transition:opacity .15s linear,transform .15s ease-in}
+.anim .on .pop{opacity:1;transform:none;will-change:auto;transition:opacity .2s linear var(--d,0ms),transform .85s var(--spring) var(--d,0ms)}
+.anim .beat .n::after{opacity:0;transform:scale(.4);transition:opacity .15s linear,transform .15s ease-in}
+.anim .beat.on .n::after{opacity:1;transform:none;transition:opacity .2s linear,transform .7s var(--spring)}
+.anim .beat.on .typing{animation:blink 1.15s .1s both}
+.anim .beat.on .typing i{animation:dot .9s 2}
+.anim .beat.on .typing i:nth-child(2){animation-delay:.15s}
+.anim .beat.on .typing i:nth-child(3){animation-delay:.3s}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@supports (animation-timeline:view()){
+  /* a linha verde acompanha o scroll pela timeline do navegador, fora da thread principal */
+  .anim .thread::after{display:block;animation:grow linear both;animation-timeline:view(block 0% 24%);animation-range:entry-crossing 0% entry-crossing 100%}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="mark" viewBox="0 0 48 48">
+    <path d="M14 4h20a12 12 0 0 1 12 12v14a12 12 0 0 1-12 12H19l-9.4 5.2a1.6 1.6 0 0 1-2.4-1.5L8 38.6A12 12 0 0 1 2 28V16A12 12 0 0 1 14 4z" fill="#12a05c"/>
+    <path d="M32.5 23a8.5 8.5 0 1 1-3-6.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M30.3 11.4v5.9h-5.9" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="arrow" viewBox="0 0 16 16">
+    <path d="M4 12l8-8M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+<header class="nav">
+  <div class="nav-pill">
+    <a class="brand" href="#topo" aria-label="Volta, início"><svg aria-hidden="true"><use href="#mark"/></svg>Volta</a>
+    <nav class="nav-links" aria-label="Seções">
+      <a href="#como">Como funciona</a>
+      <a href="#painel">Painel</a>
+      <a href="#duvidas">Dúvidas</a>
+    </nav>
+    <a class="btn sm" data-contact href="#contato">Falar com a gente</a>
+  </div>
+</header>
+
+<main id="topo">
+  <section class="hero" id="conteudo">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="kicker"><i aria-hidden="true"></i>Para clínicas veterinárias</p>
+        <h1>Seu cliente esquece a vacina. O Volta <em>lembra</em> por você.</h1>
+        <p class="lede">Quando a vacina, o vermífugo ou o retorno está perto de vencer, o tutor recebe uma mensagem no WhatsApp, enviada do número da sua clínica.</p>
+        <div class="hero-cta">
+          <a class="btn" data-contact href="#contato">Quero na minha clínica <svg aria-hidden="true"><use href="#arrow"/></svg></a>
+          <a class="link" href="#como">Ver como funciona</a>
+        </div>
+      </div>
+
+      <div>
+        <div class="phone play" role="img" aria-label="Exemplo: o Volta envia o lembrete para a tutora Marina, ela responde e a clínica combina o horário.">
+          <div class="phone-top">
+            <span class="avatar">M</span>
+            <div><strong>Marina</strong><small>tutora do Thor</small></div>
+          </div>
+          <div class="chat">
+            <span class="day">Hoje</span>
+            <div class="msg out m1">Oi Marina, aqui é da Clínica Bicho Bom. A vacina V10 do Thor vence em <span data-due="7">16/11</span>. Quer agendar? É só responder esta mensagem.<time>09:00</time></div>
+            <div class="slot">
+              <span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>
+              <div class="msg in m3">Oi! Nossa, tinha esquecido. Pode ser sábado de manhã?<time>09:12</time></div>
+            </div>
+            <div class="msg out m4">Pode sim, Marina! Sábado às 10h?<time>09:14</time></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="como">
+    <div class="wrap talk">
+      <div class="sec-head">
+        <h2>Você anota uma vez. O lembrete sai na data certa.</h2>
+        <p>Sem robô conversando no seu lugar: o Volta só envia o aviso. Quem responde o tutor é a sua equipe, no mesmo WhatsApp de sempre.</p>
+      </div>
+      <ol class="thread">
+        <li class="beat">
+          <span class="n">1</span>
+          <h3>Você anota a vacina</h3>
+          <div class="bub note pop">Thor, da Marina. Vacina V10, aplicada hoje.</div>
+        </li>
+        <li class="beat">
+          <span class="n">2</span>
+          <h3>Sete dias antes de vencer, o Volta avisa</h3>
+          <div class="bub out pop">Oi Marina, aqui é da Clínica Bicho Bom. A vacina V10 do Thor vence em <span data-due="7">16/11</span>. Quer agendar? É só responder esta mensagem.</div>
+        </li>
+        <li class="beat">
+          <span class="n">3</span>
+          <h3>A tutora responde</h3>
+          <div class="slot">
+            <span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div class="bub pop" style="--d:1150ms">Oi! Nossa, tinha esquecido. Pode ser sábado de manhã?</div>
+          </div>
+        </li>
+        <li class="beat">
+          <span class="n">4</span>
+          <h3>Você combina o horário</h3>
+          <div class="bub out pop">Pode sim, Marina! Sábado às 10h?</div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec tint" id="painel">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>Na clínica, uma lista só.</h2>
+        <p>Quem vai receber o lembrete, quem respondeu e quem já marcou. Toque nos filtros para ver a lista mudar.</p>
+      </div>
+
+      <div class="board">
+        <div class="board-top">
+          <div><strong>Lembretes</strong><small>Clínica Bicho Bom, próximos 30 dias</small></div>
+          <ul class="filters" aria-label="Filtrar lembretes">
+            <li><button type="button" data-f="all" aria-pressed="true">Todos<span>5</span></button></li>
+            <li><button type="button" data-f="reply" aria-pressed="false">Responderam<span>1</span></button></li>
+            <li><button type="button" data-f="ok" aria-pressed="false">Agendados<span>1</span></button></li>
+            <li><button type="button" data-f="wait" aria-pressed="false">A enviar<span>2</span></button></li>
+          </ul>
+        </div>
+        <ul class="rows" aria-live="polite">
+          <li class="row" data-s="reply">
+            <span class="pet" aria-hidden="true">T</span>
+            <div class="who"><strong>Thor</strong><span>Marina</span></div>
+            <div class="what">Vacina V10, vence em <span data-due="7"></span></div>
+            <span class="chip reply">Respondeu</span>
+          </li>
+          <li class="row" data-s="ok">
+            <span class="pet" aria-hidden="true">L</span>
+            <div class="who"><strong>Luna</strong><span>Carla</span></div>
+            <div class="what">Vermífugo, vence em <span data-due="3"></span></div>
+            <span class="chip ok">Agendado</span>
+          </li>
+          <li class="row" data-s="again">
+            <span class="pet" aria-hidden="true">M</span>
+            <div class="who"><strong>Mel</strong><span>Joana</span></div>
+            <div class="what">Antirrábica, venceu em <span data-due="-2"></span></div>
+            <span class="chip again"><span>2º lembrete em <span data-due="5"></span></span></span>
+          </li>
+          <li class="row" data-s="wait">
+            <span class="pet" aria-hidden="true">B</span>
+            <div class="who"><strong>Bento</strong><span>Rafael</span></div>
+            <div class="what">Retorno, em <span data-due="12"></span></div>
+            <span class="chip wait"><span>Envio em <span data-due="5"></span></span></span>
+          </li>
+          <li class="row" data-s="wait">
+            <span class="pet" aria-hidden="true">P</span>
+            <div class="who"><strong>Pipoca</strong><span>André</span></div>
+            <div class="what">Dose de filhote, em <span data-due="18"></span></div>
+            <span class="chip wait"><span>Envio em <span data-due="11"></span></span></span>
+          </li>
+        </ul>
+      </div>
+      <p class="board-note">Clínica, tutores e pets de exemplo.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="duvidas">
+    <div class="wrap faq-grid">
+      <div class="sec-head">
+        <h2>Dúvidas comuns</h2>
+      </div>
+      <div>
+        <details>
+          <summary>Preciso trocar o número da clínica?</summary>
+          <p>Não. O lembrete sai do número que a clínica já usa, e você continua atendendo nele pelo celular.</p>
+        </details>
+        <details>
+          <summary>Precisa ser WhatsApp Business?</summary>
+          <p>Sim. O número precisa estar no aplicativo WhatsApp Business, que é gratuito. Se a clínica usa o WhatsApp comum, a gente ajuda a fazer a troca.</p>
+        </details>
+        <details>
+          <summary>É um robô que conversa com o cliente?</summary>
+          <p>Não. O Volta só envia o lembrete. Quem responde o tutor é você ou alguém da sua equipe.</p>
+        </details>
+        <details>
+          <summary>Preciso configurar os prazos das vacinas?</summary>
+          <p>Não, eles já vêm prontos. V8, V10 e antirrábica vencem em 1 ano, vermífugo em 3 meses e dose de filhote em 21 dias. No retorno vale a data que você marcar, e qualquer prazo pode ser ajustado na hora de anotar.</p>
+        </details>
+        <details>
+          <summary>Quantas mensagens cada tutor recebe?</summary>
+          <p>No máximo duas por vacina: uma 7 dias antes de vencer e outra 7 dias depois, só se ele não tiver respondido.</p>
+        </details>
+        <details>
+          <summary>E as fichas que eu já tenho?</summary>
+          <p>A gente cadastra para você. Você passa a lista das vacinas já aplicadas e os lembretes já entram agendados.</p>
+        </details>
+        <details>
+          <summary>Isso é permitido pelo WhatsApp?</summary>
+          <p>Sim. O Volta usa a API oficial do WhatsApp para empresas, com uma mensagem aprovada pela Meta.</p>
+        </details>
+        <details>
+          <summary>E se eu quiser parar de usar?</summary>
+          <p>Você exporta todos os dados em planilha a qualquer momento e leva com você.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="contato">
+    <div class="wrap band-in">
+      <h2>O Volta faz uma coisa só.</h2>
+      <p>Lembra o tutor na data certa. Agenda, prontuário e financeiro continuam do jeito que você já usa hoje.</p>
+      <a class="btn light" data-contact href="mailto:nicolasmdesouza@gmail.com">Quero na minha clínica <svg aria-hidden="true"><use href="#arrow"/></svg></a>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap legal">
+  <span>Volta, 2026. Um projeto de <a href="https://nicomsz.com">Nicolas Moraes de Souza</a>.</span>
+  <span>WhatsApp é marca registrada da Meta.</span>
+</footer>
+
+<script>
+(function(){
+  var EMAIL='nicolasmdesouza@gmail.com';
+  var DIA=864e5;
+  function all(s,el){return Array.prototype.slice.call((el||document).querySelectorAll(s))}
+  function p2(n){return (n<10?'0':'')+n}
+  var agora=new Date();
+  var hoje=Date.UTC(agora.getFullYear(),agora.getMonth(),agora.getDate());
+
+  // datas relativas a hoje: a vacina do exemplo vence daqui a 7 dias, que é quando o primeiro lembrete sai
+  all('[data-due]').forEach(function(e){
+    var d=new Date(hoje+Number(e.getAttribute('data-due'))*DIA);
+    e.textContent=p2(d.getUTCDate())+'/'+p2(d.getUTCMonth()+1);
+  });
+
+  // os botões abrem o e-mail já com o assunto preenchido
+  var href='mailto:'+EMAIL+'?subject='+encodeURIComponent('Volta na minha clínica');
+  all('[data-contact]').forEach(function(a){a.href=href});
+
+  // filtros do painel
+  var btns=all('.filters button');
+  btns.forEach(function(b){
+    b.addEventListener('click',function(){
+      var f=b.getAttribute('data-f');
+      btns.forEach(function(x){x.setAttribute('aria-pressed',String(x===b))});
+      all('.row').forEach(function(r){r.hidden=!(f==='all'||r.getAttribute('data-s')===f)});
+    });
+  });
+
+  // animações no scroll: o observer só liga e desliga uma classe; quem anima é o CSS
+  var parado=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!parado&&'IntersectionObserver' in window){
+    all('.sec-head,.board,#duvidas details,.band-in').forEach(function(el){
+      var i=Array.prototype.indexOf.call(el.parentNode.children,el);
+      el.classList.add('rv');
+      el.style.setProperty('--d',(i%4)*60+'ms');
+    });
+    document.documentElement.classList.add('anim');
+    var io=new IntersectionObserver(function(entradas){
+      entradas.forEach(function(e){
+        if(e.isIntersecting){
+          if(e.intersectionRatio>=.2)e.target.classList.add('on');
+        }else if(e.boundingClientRect.top>0){
+          e.target.classList.remove('on');
+        }
+      });
+    },{rootMargin:'0px 0px -10% 0px',threshold:[0,.2]});
+    all('.rv,.beat').forEach(function(el){io.observe(el)});
+  }
+})();
+</script>
+</body>
+</html>

@@ -126,15 +126,18 @@ button{font:inherit;color:inherit}
 .scene{position:relative;background:var(--night)}
 .hero{position:relative;background:var(--paper);color:var(--ink);overflow:clip}
 /* Espectro de luz atrás do aparelho do herói: quatro manchas de cor borradas que giram devagar.
+   As cores saem da cor da marca (--accent), misturada com azul, amarelo e rosa como no ícone do
+   header, então o espectro muda junto quando a pessoa troca a cor no botão.
    Fica no herói e sai de cena com ele quando o aparelho desce para a stack. */
-.who,.hero__title,.hero__body{position:relative;z-index:1}
+.hero__title,.hero__body{position:relative;z-index:1}
 .hero .anchor{position:relative}
 .spectrum{position:absolute;left:50%;top:50%;z-index:0;width:min(250%,92vw,560px);aspect-ratio:1;translate:-50% -50%;border-radius:50%;pointer-events:none;opacity:.8;filter:blur(clamp(28px,4vw,48px));
+  background:radial-gradient(circle,var(--accent) 0 30%,transparent 62%);
   background:
-    radial-gradient(circle at 32% 30%,#6b3fc0 0 16%,transparent 48%),
-    radial-gradient(circle at 70% 30%,#e0407e 0 18%,transparent 50%),
-    radial-gradient(circle at 72% 66%,#ff5f3d 0 18%,transparent 50%),
-    radial-gradient(circle at 32% 72%,#f5a623 0 18%,transparent 50%);
+    radial-gradient(circle at 32% 30%,color-mix(in oklab,var(--accent),#3b6cff 70%) 0 16%,transparent 48%),
+    radial-gradient(circle at 70% 30%,color-mix(in oklab,var(--accent),#ff3d7f 55%) 0 18%,transparent 50%),
+    radial-gradient(circle at 72% 66%,var(--accent) 0 18%,transparent 50%),
+    radial-gradient(circle at 32% 72%,color-mix(in oklab,var(--accent),#ffcc33 70%) 0 18%,transparent 50%);
   animation:spectrum 22s linear infinite}
 @keyframes spectrum{to{rotate:360deg}}
 .gl{display:none}
@@ -148,8 +151,6 @@ button{font:inherit;color:inherit}
 
 /* Herói */
 .hero__in{display:grid;grid-template-columns:minmax(0,1fr);row-gap:20px;padding-top:86px;padding-bottom:calc(var(--radius) + 40px)}
-.who{display:grid;row-gap:2px;line-height:1.35}
-.who strong{font-weight:680}
 .hero__title{display:grid}
 .hero .big{font-size:min(10.4vw,6.8vh);font-size:min(10.4vw,6.8svh)}
 .big .kw{font-weight:340;letter-spacing:-.035em;color:var(--mute)}
@@ -349,7 +350,6 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
   .visual .brandbox{justify-items:center;text-align:center}
 
   .hero__in{grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto minmax(0,1fr) auto;column-gap:24px;row-gap:28px;min-height:calc(100vh - 30px);min-height:calc(100svh - 30px);padding-top:108px;padding-bottom:calc(var(--radius) + 44px)}
-  .who{grid-column:1/8;grid-row:1}
   .hero__visual{grid-column:9/13;grid-row:1/4}
   .hero__title{grid-column:1/9;grid-row:2;align-self:end}
   .hero__body{grid-column:1/7;grid-row:3}
@@ -430,8 +430,6 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
     <div class="scene__flow">
     <div class="hero" data-hero>
       <div class="in hero__in">
-        <p class="who"><span><strong>Nicolas Moraes de Souza</strong>, desenvolvedor</span></p>
-
         <div class="visual hero__visual">
           <div class="anchor" data-anchor="hero"><div class="spectrum" aria-hidden="true"></div><div class="fallback" aria-hidden="true"></div></div>
         </div>
@@ -563,13 +561,13 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
             <span class="label">System design, Node.js, TypeScript e Redis</span>
             <h3 class="work__t">Gateway de LLM</h3>
             <p class="work__d">Um servidor entre os apps e as APIs de modelos de IA: rate limit por tokens, streaming com cancelamento, failover entre provedores, circuit breaker e cache. Cada mecanismo é medido ligado e desligado; com um provedor travado, o circuit breaker baixou o p99 de 1.270 ms para 118 ms.</p>
-            <p class="work__links"><a href="https://guia-do-gateway-de-llm.vercel.app/">Guia com 9 lições <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a><a href="https://github.com/nicomsz/llm-gateway">Código no GitHub <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
+            <p class="work__links"><a href="/llm-gateway/">Guia com 9 lições <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a><a href="https://github.com/nicomsz/llm-gateway">Código no GitHub <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
           </li>
           <li class="work__item">
             <span class="label">Landing page de produto</span>
             <h3 class="work__t">Volta</h3>
             <p class="work__d">Página de um produto para clínicas veterinárias: o tutor recebe o lembrete da vacina no WhatsApp da clínica. A conversa se monta conforme a rolagem, e o painel de lembretes tem filtros que funcionam.</p>
-            <p class="work__links"><a href="https://volta-vet.vercel.app/">Ver a página <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
+            <p class="work__links"><a href="/volta/">Ver a página <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
           </li>
         </ul>
       </div>

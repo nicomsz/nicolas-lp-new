@@ -14,6 +14,13 @@ O site inteiro é um arquivo, o `index.html`. Não tem framework nem etapa de bu
 - **Movimento reduzido:** com `prefers-reduced-motion`, as transições e o balanço automático do aparelho são desligados; o 3D só se move junto com o scroll.
 - **Fonte:** [Mona Sans](https://github.com/github/mona-sans), variável, embutida no próprio HTML.
 
+## Páginas de projetos
+
+- [`/llm-gateway/`](https://nicomsz.com/llm-gateway/): guia de system design do [llm-gateway](https://github.com/nicomsz/llm-gateway), em 9 lições.
+- [`/volta/`](https://nicomsz.com/volta/): landing page do Volta, lembrete de vacina pelo WhatsApp para clínicas veterinárias.
+
+Cada uma é um `index.html` independente, na própria pasta.
+
 ## Rodar localmente
 
 Qualquer servidor de arquivos estáticos serve:
