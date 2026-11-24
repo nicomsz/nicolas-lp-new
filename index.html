@@ -124,7 +124,19 @@ button{font:inherit;color:inherit}
    que a viewport: assim a resolução interna pode ser alta sem desenhar a altura inteira. Fundo escuro atrás: os cantos
    nunca mostram papel. */
 .scene{position:relative;background:var(--night)}
-.hero{position:relative;background:var(--paper);color:var(--ink)}
+.hero{position:relative;background:var(--paper);color:var(--ink);overflow:clip}
+/* Espectro de luz atrás do aparelho do herói: quatro manchas de cor borradas que giram devagar.
+   Fica no herói e sai de cena com ele quando o aparelho desce para a stack. */
+.who,.hero__title,.hero__body{position:relative;z-index:1}
+.hero .anchor{position:relative}
+.spectrum{position:absolute;left:50%;top:50%;z-index:0;width:min(250%,92vw,560px);aspect-ratio:1;translate:-50% -50%;border-radius:50%;pointer-events:none;opacity:.8;filter:blur(clamp(28px,4vw,48px));
+  background:
+    radial-gradient(circle at 32% 30%,#6b3fc0 0 16%,transparent 48%),
+    radial-gradient(circle at 70% 30%,#e0407e 0 18%,transparent 50%),
+    radial-gradient(circle at 72% 66%,#ff5f3d 0 18%,transparent 50%),
+    radial-gradient(circle at 32% 72%,#f5a623 0 18%,transparent 50%);
+  animation:spectrum 22s linear infinite}
+@keyframes spectrum{to{rotate:360deg}}
 .gl{display:none}
 .pin .scene{display:grid;grid-template-columns:minmax(0,1fr)}
 .pin .scene > *{grid-area:1/1}
@@ -139,7 +151,7 @@ button{font:inherit;color:inherit}
 .who{display:grid;row-gap:2px;line-height:1.35}
 .who strong{font-weight:680}
 .hero__title{display:grid}
-.hero .big{font-size:min(13.2vw,8.6vh);font-size:min(13.2vw,8.6svh)}
+.hero .big{font-size:min(10.4vw,6.8vh);font-size:min(10.4vw,6.8svh)}
 .big .kw{font-weight:340;letter-spacing:-.035em;color:var(--mute)}
 .hero__body{display:grid;row-gap:20px}
 .cta{display:flex;flex-wrap:wrap;gap:10px}
@@ -293,6 +305,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 .contact__title{display:grid}
 .contact__visual{display:contents}
 .contact__lede{grid-column:1;grid-row:2}
+.contact__mail{color:inherit;text-decoration:underline;text-underline-offset:.2em;text-decoration-thickness:1px;overflow-wrap:anywhere}
 .contact__visual .brandbox{grid-column:1;grid-row:3}
 .contact__visual .anchor{grid-column:2;grid-row:2/4;align-self:end;height:min(27vh,210px);height:min(27svh,210px)}
 .links{display:grid;grid-row:4;border-bottom:1px solid var(--line)}
@@ -332,7 +345,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
   .hero__title{grid-column:1/9;grid-row:2;align-self:end}
   .hero__body{grid-column:1/7;grid-row:3}
   .hero .lede{font-size:clamp(1.125rem,1.4vw,1.3125rem)}
-  .hero .big{font-size:min(7.4vw,11.4vh);font-size:min(7.4vw,11.4svh)}
+  .hero .big{font-size:min(5.4vw,8.4vh);font-size:min(5.4vw,8.4svh)}
 
   .stage__in{grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-rows:minmax(0,1fr);column-gap:24px;align-items:center;padding-top:96px;padding-bottom:48px}
   .stage__anchor{grid-column:2;grid-row:1;height:100%}
@@ -407,7 +420,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
         <p class="who"><span><strong>Nicolas Moraes de Souza</strong>, desenvolvedor</span></p>
 
         <div class="visual hero__visual">
-          <div class="anchor" data-anchor="hero"><div class="fallback" aria-hidden="true"></div></div>
+          <div class="anchor" data-anchor="hero"><div class="spectrum" aria-hidden="true"></div><div class="fallback" aria-hidden="true"></div></div>
         </div>
 
         <h1 class="hero__title">
@@ -572,17 +585,16 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
         <span class="big">o seu.</span>
       </h2>
 
-      <p class="lede contact__lede">Aberto a projetos, times e boas conversas.</p>
+      <p class="lede contact__lede">Aberto a projetos, times e boas conversas.<br><a class="contact__mail" href="mailto:nicolasmdesouza@gmail.com">nicolasmdesouza@gmail.com</a></p>
 
       <ul class="links">
         <li><a href="https://www.linkedin.com/in/nicolasmsouza">LinkedIn <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></li>
         <li><a href="https://github.com/nicomsz">GitHub <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></li>
-        <li><a href="https://nicomsz.com">nicomsz.com <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></li>
+        <li><a href="mailto:nicolasmdesouza@gmail.com">E-mail <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></li>
       </ul>
 
       <footer class="foot label">
         <span>© 2026 Nicolas Moraes de Souza</span>
-        <span>1 fonte variável, 1 canvas WebGL, 0 imagens</span>
       </footer>
     </div>
   </section>
