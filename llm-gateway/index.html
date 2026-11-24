@@ -65,7 +65,8 @@ code { font-size: 0.86em; background: var(--surface); padding: 1.5px 5px; border
   border: 1px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi); box-shadow: inset -1px -1px 0 var(--shadow);
   font-size: 12px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
 }
-.route a:hover .dot { color: var(--ink); }
+@media (hover: hover) { .route a:hover .dot { color: var(--ink); } }
+.route a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .route a[data-s="partial"] .dot { color: var(--ink); outline: 1px dotted var(--ink); outline-offset: -5px; }
 .route a[data-s="done"] .dot {
   background: var(--hi); color: var(--ink); font-weight: 700;
@@ -267,6 +268,15 @@ dl.what dd:last-child { margin-bottom: 0; }
   .bar { flex-wrap: wrap; gap: 10px 16px; padding: 12px 16px 14px; }
   .brand { margin-right: auto; }
   .route { order: 5; flex-basis: 100%; max-width: none; margin: 0; }
+  /* no celular, cada número ocupa uma célula de largura igual e 44 px de altura: o toque cai sempre
+     no número mais próximo, e a linha entre eles fica atrás, sem ser parte de nenhum link */
+  .route {
+    display: grid; grid-template-columns: repeat(10, minmax(0, 1fr));
+    background: linear-gradient(var(--shadow), var(--shadow)) center / calc(100% - 30px) 1px no-repeat;
+  }
+  .route a, .route a:last-child { flex: none; justify-content: center; min-height: 44px; }
+  .route a::after { display: none; }
+  .dot { width: 30px; height: 30px; font-size: 13px; }
   main { padding: 44px 16px 72px; }
   .view { gap: 36px; }
   section { grid-template-columns: minmax(0, 1fr); row-gap: 14px; padding-top: 22px; }
