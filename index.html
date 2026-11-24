@@ -307,6 +307,9 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 /* Projetos: um item por projeto, com o que é, a prova e os links */
 .work{display:grid;border-bottom:1px solid var(--line)}
 .work__item{display:grid;align-content:start;row-gap:10px;padding:22px 0 26px;border-top:1px solid var(--line)}
+.work__shot{display:block;margin-bottom:10px;aspect-ratio:16/10;border-radius:clamp(14px,1.6vw,22px);overflow:hidden;background:#fff;border:1px solid var(--line);box-shadow:0 30px 60px -44px rgb(0 0 0 / .45)}
+.work__shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;transition:transform .6s var(--ease)}
+@media (hover:hover){.work__shot:hover img{transform:scale(1.03)}}
 .work__t{font-size:1.5rem;font-weight:750;line-height:1.15;letter-spacing:-.03em}
 .work__d{max-width:34em;font-size:1rem;line-height:1.5;color:var(--mute);text-wrap:pretty}
 .work__links{display:flex;flex-wrap:wrap;gap:10px 24px;margin-top:4px}
@@ -567,12 +570,14 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
         <h2 class="h2">Projetos</h2>
         <ul class="work">
           <li class="work__item">
+            <a class="work__shot" href="/llm-gateway/" tabindex="-1" aria-hidden="true"><img src="projetos/llm-gateway.webp" alt="" width="1280" height="800" loading="lazy" decoding="async"></a>
             <span class="label">Página de estudo de system design</span>
             <h3 class="work__t">System design com LLM</h3>
             <p class="work__d">Uma página que ensina, em 9 lições curtas, os conceitos de arquitetura de um produto que usa IA em produção: rate limit, streaming, failover, circuit breaker, fila e cache. Cada lição mostra o trecho de código e o número medido num gateway de LLM de código aberto.</p>
             <p class="work__links"><a href="/llm-gateway/">Ler as 9 lições <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a><a href="https://github.com/nicomsz/llm-gateway">Ver o código <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
           </li>
           <li class="work__item">
+            <a class="work__shot" href="/volta/" tabindex="-1" aria-hidden="true"><img src="projetos/volta.webp" alt="" width="1280" height="800" loading="lazy" decoding="async"></a>
             <span class="label">Landing page de produto</span>
             <h3 class="work__t">Volta</h3>
             <p class="work__d">Página de um produto para clínicas veterinárias: o tutor recebe o lembrete da vacina no WhatsApp da clínica. A conversa se monta conforme a rolagem, e o painel de lembretes tem filtros que funcionam.</p>
