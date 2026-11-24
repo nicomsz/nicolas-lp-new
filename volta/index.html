@@ -14,8 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,400..700&display=swap">
 <style>
-/* Marca: branco, verde e azul. Uma família só (Google Sans Flex); as mensagens de WhatsApp
-   usam a fonte do aparelho, como no aplicativo. */
+/* Marca: branco, verde e azul. Uma família só (Google Sans Flex), inclusive nas conversas. */
 :root{
   color-scheme:light;
   --bg:#ffffff;
@@ -33,7 +32,7 @@
   --blue-soft:#e6f0fe;
   --bubble-out:#d9f4e4;
   --sans:"Google Sans Flex",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --chat:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --chat:var(--sans);
   --ease:cubic-bezier(.2,.7,.2,1);
   --spring:cubic-bezier(.34,1.56,.64,1);
 }
@@ -237,7 +236,7 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
       <a href="#painel">Painel</a>
       <a href="#duvidas">Dúvidas</a>
     </nav>
-    <a class="btn sm" data-contact href="#contato">Falar com a gente</a>
+    <a class="btn sm" data-contact href="contato/">Falar com a gente</a>
   </div>
 </header>
 
@@ -249,13 +248,13 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
         <h1>Seu cliente esquece a vacina. O Volta <em>lembra</em> por você.</h1>
         <p class="lede">Quando a vacina, o vermífugo ou o retorno está perto de vencer, o tutor recebe uma mensagem no WhatsApp, enviada do número da sua clínica.</p>
         <div class="hero-cta">
-          <a class="btn" data-contact href="#contato">Quero na minha clínica <svg aria-hidden="true"><use href="#arrow"/></svg></a>
+          <a class="btn" data-contact href="contato/">Quero na minha clínica <svg aria-hidden="true"><use href="#arrow"/></svg></a>
           <a class="link" href="#como">Ver como funciona</a>
         </div>
       </div>
 
       <div>
-        <div class="phone play" role="img" aria-label="Exemplo: o Volta envia o lembrete para a tutora Marina, ela responde e a clínica combina o horário.">
+        <div class="phone" id="phone" role="img" aria-label="Exemplo: o Volta envia o lembrete para a tutora Marina, ela responde e a clínica combina o horário.">
           <div class="phone-top">
             <span class="avatar">M</span>
             <div><strong>Marina</strong><small>tutora do Thor</small></div>
@@ -408,7 +407,7 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
     <div class="wrap band-in">
       <h2>O Volta faz uma coisa só.</h2>
       <p>Lembra o tutor na data certa. Agenda, prontuário e financeiro continuam do jeito que você já usa hoje.</p>
-      <a class="btn light" data-contact href="mailto:nicolasmdesouza@gmail.com">Quero na minha clínica <svg aria-hidden="true"><use href="#arrow"/></svg></a>
+      <a class="btn light" data-contact href="contato/">Quero na minha clínica <svg aria-hidden="true"><use href="#arrow"/></svg></a>
     </div>
   </section>
 </main>
@@ -420,7 +419,6 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
 
 <script>
 (function(){
-  var EMAIL='nicolasmdesouza@gmail.com';
   var DIA=864e5;
   function all(s,el){return Array.prototype.slice.call((el||document).querySelectorAll(s))}
   function p2(n){return (n<10?'0':'')+n}
@@ -433,10 +431,6 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
     e.textContent=p2(d.getUTCDate())+'/'+p2(d.getUTCMonth()+1);
   });
 
-  // os botões abrem o e-mail já com o assunto preenchido
-  var href='mailto:'+EMAIL+'?subject='+encodeURIComponent('Volta na minha clínica');
-  all('[data-contact]').forEach(function(a){a.href=href});
-
   // filtros do painel
   var btns=all('.filters button');
   btns.forEach(function(b){
@@ -447,25 +441,41 @@ details p{max-width:40em;padding-bottom:22px;color:var(--ink-2)}
     });
   });
 
-  // animações no scroll: o observer só liga e desliga uma classe; quem anima é o CSS
   var parado=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(!parado&&'IntersectionObserver' in window){
+  var temIO='IntersectionObserver' in window;
+
+  // a conversa do herói só começa quando metade do celular está na tela (no celular ele fica abaixo do texto)
+  var phone=document.getElementById('phone');
+  if(parado||!temIO){phone.classList.add('play')}
+  else{
+    var po=new IntersectionObserver(function(es){
+      if(es[0].isIntersecting){phone.classList.add('play');po.disconnect()}
+    },{threshold:.5});
+    po.observe(phone);
+  }
+
+  // animações no scroll: o observer só liga uma classe; quem anima é o CSS
+  if(!parado&&temIO){
     all('.sec-head,.board,#duvidas details,.band-in').forEach(function(el){
       var i=Array.prototype.indexOf.call(el.parentNode.children,el);
       el.classList.add('rv');
       el.style.setProperty('--d',(i%4)*60+'ms');
     });
     document.documentElement.classList.add('anim');
+    // cada elemento aparece uma vez, quando chega a 10% do fim da tela
     var io=new IntersectionObserver(function(entradas){
       entradas.forEach(function(e){
-        if(e.isIntersecting){
-          if(e.intersectionRatio>=.2)e.target.classList.add('on');
-        }else if(e.boundingClientRect.top>0){
-          e.target.classList.remove('on');
-        }
+        if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}
       });
-    },{rootMargin:'0px 0px -10% 0px',threshold:[0,.2]});
-    all('.rv,.beat').forEach(function(el){io.observe(el)});
+    },{rootMargin:'0px 0px -10% 0px'});
+    all('.rv').forEach(function(el){io.observe(el)});
+    // os passos da conversa só tocam quando o passo passa do meio da tela, para o balão aparecer à vista
+    var passos=new IntersectionObserver(function(entradas){
+      entradas.forEach(function(e){
+        if(e.isIntersecting){e.target.classList.add('on');passos.unobserve(e.target)}
+      });
+    },{rootMargin:'0px 0px -45% 0px'});
+    all('.beat').forEach(function(el){passos.observe(el)});
   }
 })();
 </script>
