@@ -381,7 +381,7 @@ dl.what dd:last-child { margin-bottom: 0; }
       <tbody>
         <tr><td>Tenant</td><td>Um cliente do gateway: um app, um time ou uma empresa. Cada tenant tem a sua chave e a sua cota.</td></tr>
         <tr><td>Provedor</td><td>A API que roda o modelo. No projeto, são três provedores falsos que imitam a API da Anthropic.</td></tr>
-        <tr><td>Token</td><td>O pedaço de texto que o modelo lê ou escreve, e a unidade em que ele é cobrado. Um token tem cerca de 4 caracteres.</td></tr>
+        <tr><td>Token</td><td>O pedaço de texto que o modelo lê ou escreve, e a unidade em que ele é cobrado. Um token tem cerca de 4 caracteres em inglês; em português, costuma ter um pouco menos.</td></tr>
         <tr><td>SSE</td><td>Server-Sent Events: o formato em que a API manda a resposta aos pedaços, pela mesma conexão HTTP.</td></tr>
         <tr><td>TTFT</td><td>Time to first token: o tempo até o primeiro pedaço da resposta chegar. É o que o usuário sente como "começou a responder".</td></tr>
         <tr><td>p50 e p99</td><td>A latência que 50% e 99% dos requests não passaram. O p99 mostra o pior caso que ainda acontece com frequência.</td></tr>
@@ -398,14 +398,14 @@ dl.what dd:last-child { margin-bottom: 0; }
       <li><b>Por que é a escolha comum:</b> o que ele ganha das alternativas.</li>
       <li><b>Como funciona:</b> o fluxo, passo a passo, e o trecho do código do projeto que faz isso.</li>
       <li><b>O que o experimento mostrou:</b> o mecanismo ligado e desligado, com números medidos.</li>
-      <li><b>Pergunta de entrevista:</b> uma pergunta que costuma aparecer sobre o assunto, com a resposta curta.</li>
+      <li><b>Pergunta de entrevista:</b> uma pergunta sobre o assunto no formato de entrevista de system design, com a resposta curta.</li>
     </ol>
     <p>Uma lição conta como lida quando você rola a página dela até o fim. Cada lição lida acende um bloco na barra do topo, e o progresso fica salvo neste navegador.</p>
   </section>
 
   <section>
     <h2>Sobre os números</h2>
-    <p>Os números das lições saem do comando <code>pnpm bench</code> do repositório. Ele sobe três provedores falsos, com latência fixa de 100 ms, e o gateway, tudo na mesma máquina. Os números mostram o efeito de cada mecanismo, não o desempenho com uma API real. Você pode rodar e conferir:</p>
+    <p>Os números das lições saem do comando <code>pnpm bench</code> do repositório. Ele sobe três provedores falsos, com latência fixa (100 ms na maioria dos testes), e o gateway, tudo na mesma máquina. Os números mostram o efeito de cada mecanismo, não o desempenho com uma API real. Você pode rodar e conferir:</p>
     <figure class="code"><figcaption>no terminal</figcaption><pre><code>git clone https://github.com/nicomsz/llm-gateway
 cd llm-gateway
 pnpm install
@@ -562,7 +562,7 @@ res.on('close', () =&gt; {
       </tbody>
     </table></div>
     <p>O primeiro pedaço chega pelo gateway 1 ms depois de chegar direto. Se o gateway montasse a resposta antes de repassar, esse número seria 1.208 ms.</p>
-    <p>No teste de cancelamento, 100 clientes fecharam a conexão 400 ms depois de enviar. Os 100 cancelamentos chegaram ao provedor, que gerou 429 dos 2.000 pedaços que geraria: 21% do texto, e do custo.</p>
+    <p>No teste de cancelamento, 100 clientes fecharam a conexão 400 ms depois de enviar. Os 100 cancelamentos chegaram ao provedor, que gerou 429 dos 2.000 pedaços que geraria: 21% do texto, e do custo dos tokens de saída. Os tokens de entrada são cobrados inteiros de qualquer jeito.</p>
   </section>
 
   <section>
@@ -601,8 +601,8 @@ res.on('close', () =&gt; {
 
   <section>
     <h2>Por que é a escolha comum</h2>
-    <p>O token bucket guarda só dois números por tenant: o saldo e a hora da última atualização. O saldo sobe numa taxa fixa até um teto, e cada request desconta dele. Comparado à janela fixa ("6.000 tokens por minuto, zerando no minuto cheio"), ele não deixa o tenant gastar a cota inteira no fim de um minuto e de novo no começo do seguinte. Comparado a guardar a hora de cada request (janela deslizante), ele usa memória constante.</p>
-    <p>O problema específico de LLM: só depois da resposta se sabe quantos tokens o request usou. A solução é <b>reservar e devolver</b>: na entrada, o gateway desconta uma estimativa (o tamanho do texto dividido por 4, mais o <code>max_tokens</code> pedido); no fim, devolve ao saldo o que não foi usado.</p>
+    <p>O token bucket guarda só dois números por tenant: o saldo e a hora da última atualização. O saldo sobe numa taxa fixa até um teto, e cada request desconta dele. Comparado à janela fixa ("6.000 tokens por minuto, zerando no minuto cheio"), ele não deixa o tenant gastar a cota inteira no fim de um minuto e de novo no começo do seguinte. Comparado à janela deslizante que guarda a hora de cada request, ele usa memória constante.</p>
+    <p>O problema específico de LLM: só depois da resposta se sabe quantos tokens o request usou. A solução é <b>reservar e devolver</b>: na entrada, o gateway desconta uma estimativa (o tamanho do corpo do request dividido por 4, mais o <code>max_tokens</code> pedido); no fim, devolve ao saldo o que não foi usado.</p>
   </section>
 
   <section>
@@ -611,8 +611,9 @@ res.on('close', () =&gt; {
     <ol class="plain">
       <li>O tenant chega com saldo cheio: 6.000.</li>
       <li>Um request estima 1.200 tokens. O saldo cai para 4.800, e o request passa.</li>
-      <li>A resposta usou só 300. O gateway devolve 900: o saldo vai para 5.700.</li>
+      <li>A resposta usou só 300. O gateway devolve 900: o saldo vai para 5.700, mais o pouco que recarregou durante o request.</li>
       <li>Se um request estimar mais do que o saldo, o gateway responde <code>429</code> com o header <code>retry-after</code>: quantos segundos faltam para a recarga cobrir a diferença.</li>
+      <li>Se a estimativa passar da cota inteira (6.000), o request nunca caberia, por mais que o tenant espere. Aí o gateway responde <code>400</code>, e não <code>429</code>: esperar não resolve.</li>
     </ol>
     <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/tokenBucket.ts">src/gateway/tokenBucket.ts</a>: recarga e desconto</figcaption><pre><code>const elapsedSec = Math.max(0, now - bucket.ts) / 1000;
 bucket.tokens = Math.min(capacity, bucket.tokens + elapsedSec * ratePerSec);
@@ -673,8 +674,8 @@ redis.call('HSET', KEYS[1], 'tokens', tostring(tokens), 'ts', tostring(now))</co
   <section class="why">
     <h2>Quando você precisa</h2>
     <dl>
-      <dt>Mais de uma conta ou região</dt>
-      <dd>Cada conta de API tem o seu limite de requests por minuto. Duas contas, ou a mesma API em duas regiões, somam capacidade, desde que o tráfego seja dividido entre elas.</dd>
+      <dt>Mais de uma nuvem ou região</dt>
+      <dd>Cada provedor tem o seu limite de requests por minuto. O mesmo modelo por dois caminhos (a API direta e o Amazon Bedrock, por exemplo) ou em duas regiões soma capacidade, desde que o tráfego seja dividido entre eles.</dd>
       <dt>Provedores com velocidades diferentes</dt>
       <dd>Um provedor está mais lento hoje. Mandar para ele a mesma quantidade que para os outros acumula requests esperando nele.</dd>
     </dl>
@@ -743,7 +744,7 @@ this.cursor = this.all.indexOf(chosen);</code></pre></figure>
       <dt>O provedor está sobrecarregado</dt>
       <dd>A API devolve <code>529</code> (sobrecarga) ou <code>503</code>. Outro provedor, ou o mesmo uns segundos depois, provavelmente responde.</dd>
       <dt>A conexão caiu no meio do caminho</dt>
-      <dd>A rede falhou antes da resposta chegar. O request não chegou a ser processado, ou foi processado e a resposta se perdeu; tentar de novo resolve os dois casos para uma pergunta ao modelo.</dd>
+      <dd>A rede falhou antes da resposta chegar. O request não chegou a ser processado, ou foi processado e a resposta se perdeu; tentar de novo resolve os dois casos para uma pergunta ao modelo, que não muda nada do lado do provedor. O preço: no segundo caso, você paga a chamada duas vezes.</dd>
     </dl>
   </section>
 
@@ -754,7 +755,7 @@ this.cursor = this.all.indexOf(chosen);</code></pre></figure>
       <thead><tr><th>Resultado</th><th>Tenta de novo?</th><th>Por quê</th></tr></thead>
       <tbody>
         <tr><td>Falha de conexão, tempo limite</td><td>Sim</td><td>Problema no caminho ou no provedor</td></tr>
-        <tr><td><code>429</code>, <code>529</code>, <code>500</code> a <code>504</code></td><td>Sim</td><td>O provedor está sobrecarregado ou com defeito</td></tr>
+        <tr><td><code>429</code>, <code>529</code>, <code>500</code> a <code>504</code></td><td>Sim</td><td>O provedor recusou por limite ou sobrecarga, ou está com defeito</td></tr>
         <tr><td><code>400</code>, <code>401</code>, <code>404</code></td><td>Não</td><td>O problema é o request: outro provedor daria a mesma resposta</td></tr>
       </tbody>
     </table></div>
@@ -762,7 +763,7 @@ this.cursor = this.all.indexOf(chosen);</code></pre></figure>
     <figure class="code"><figcaption><a href="https://github.com/nicomsz/llm-gateway/blob/main/src/gateway/balancer.ts">src/gateway/balancer.ts</a>: backoff exponencial com jitter</figcaption><pre><code>export function backoffMs(attempt: number, random: number, baseMs = 200, capMs = 2000): number {
   return Math.min(capMs, baseMs * 2 ** attempt) * random;
 }
-// tentativa 1: até 200 ms; tentativa 2: até 400 ms; tentativa 3: até 800 ms ... nunca mais que 2 s</code></pre></figure>
+// 1ª nova tentativa: até 200 ms; 2ª: até 400 ms; 3ª: até 800 ms ... nunca mais que 2 s</code></pre></figure>
   </section>
 
   <section>
@@ -918,7 +919,7 @@ success() {
     <h2>Quando você precisa</h2>
     <dl>
       <dt>O provedor tem limite de concorrência</dt>
-      <dd>Sua conta aceita, digamos, 50 requests simultâneos. O 51º recebe erro do provedor. É melhor o gateway segurar o 51º um pouco do que gastar uma chamada com erro garantido.</dd>
+      <dd>O provedor aguenta um certo número de requests ao mesmo tempo, digamos 50: é o servidor do modelo que você hospeda, ou o limite da sua conta. O 51º recebe erro. É melhor o gateway segurar o 51º um pouco do que gastar uma chamada com erro garantido.</dd>
       <dt>Chega um pico maior do que a capacidade</dt>
       <dd>Uma fila sem limite cresce sem parar, a espera cresce junto, e o app desiste (tempo limite) depois que o gateway já gastou trabalho com o request.</dd>
     </dl>
@@ -1024,7 +1025,7 @@ if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) 
 
   <section>
     <h2>O que o experimento mostrou</h2>
-    <p>1.000 requests, 10 ao mesmo tempo; 30% deles repetem uma de 10 perguntas frequentes. Esses 30% são uma premissa do teste, não um dado do mundo real.</p>
+    <p>1.000 requests, 10 ao mesmo tempo; 30% deles repetem uma de 10 perguntas frequentes. Esses 30% são uma premissa do teste, não um dado do mundo real, e o custo usa um preço de exemplo.</p>
     <div class="scroll"><table>
       <thead><tr><th>Configuração</th><th>Chamadas ao provedor</th><th>Respostas do cache</th><th>Custo</th><th>Latência média</th></tr></thead>
       <tbody>
@@ -1038,7 +1039,7 @@ if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) 
   <section>
     <h2>Pergunta de entrevista</h2>
     <p><b>O que é cache stampede e como evitar?</b></p>
-    <p>É quando uma entrada do cache não existe (ou expira) e muitos requests ao mesmo tempo vão buscar o mesmo valor na origem. Com LLM, cada busca é cara. A solução do projeto é single-flight: só o primeiro busca, os outros esperam o resultado dele.</p>
+    <p>É quando uma entrada do cache não existe (ou expira) e muitos requests ao mesmo tempo vão buscar o mesmo valor na origem. Com LLM, cada busca é cara. A solução do projeto é single-flight: só o primeiro busca, os outros esperam o resultado dele. O mapa de chamadas em andamento fica na memória de cada cópia do gateway: com 4 cópias, o pior caso são 4 chamadas, e não 1. Para ser uma só entre todas as cópias, seria preciso uma trava no Redis.</p>
   </section>
 
   <nav class="pager" aria-label="Lição anterior e próxima"><a class="prev" href="#licao-7"><small><kbd>←</kbd>Anterior</small><span>Fila e load shedding</span></a><a class="next" href="#licao-9"><small>Próxima<kbd>→</kbd></small><span>Métricas e teste de carga</span></a></nav>
@@ -1072,7 +1073,7 @@ if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) 
   <section>
     <h2>Por que é a escolha comum</h2>
     <p><b>Uma linha de log por request, em JSON</b> (formato JSONL). Cada linha tem tudo sobre aquele request; qualquer pergunta vira um filtro e uma soma. É o formato que ferramentas como Datadog, Loki e BigQuery leem direto.</p>
-    <p><b>Percentis, não média.</b> A média esconde a cauda: no experimento do provedor travado (lição 6), a mediana era 104 ms com e sem circuit breaker. Só o p99 mostrava que 138 requests passavam de 1 segundo. Um usuário que usa o produto o dia todo encontra o p99 várias vezes por dia.</p>
+    <p><b>Percentis, não média.</b> A média, e até a mediana, escondem a cauda: no experimento do provedor travado (lição 6), a mediana era 104 ms com e sem circuit breaker. Só o p99 mostrava que 138 requests passavam de 1 segundo. Um usuário que usa o produto o dia todo encontra o p99 várias vezes por dia.</p>
   </section>
 
   <section>
@@ -1124,14 +1125,14 @@ if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) 
   <header>
     <div class="eyebrow"><span class="tag">Revisão</span><span class="tag">10 min</span></div>
     <h1>Perguntas de entrevista</h1>
-    <p class="lede">As perguntas que costumam aparecer sobre um sistema como este, com a resposta curta e a lição que explica cada uma.</p>
+    <p class="lede">Perguntas no formato de entrevista de system design sobre um sistema como este, com a resposta curta e a lição que explica cada uma.</p>
   </header>
 
   <section>
     <h2>Desenho geral</h2>
     <div class="qa">
       <details><summary>Desenhe um gateway para várias APIs de LLM.</summary><p>Um proxy reverso com estas paradas, nesta ordem: autenticação, cache, rate limit por tenant, balanceador com circuit breaker, fila por provedor e a chamada com streaming. O estado compartilhado (cota e cache) fica no Redis; o resto, na memória de cada cópia. Uma linha de log por request. Lições <a href="#licao-1">1</a> e <a href="#licao-9">9</a>.</p></details>
-      <details><summary>Como escalar para várias cópias do gateway?</summary><p>As cópias ficam atrás de um load balancer comum, sem estado próprio que importe entre requests. Cota e cache vão para o Redis, para todas verem o mesmo saldo e as mesmas respostas. O circuit breaker e a fila ficam por cópia, de propósito. Lições <a href="#licao-3">3</a> e <a href="#licao-6">6</a>.</p></details>
+      <details><summary>Como escalar para várias cópias do gateway?</summary><p>As cópias ficam atrás de um load balancer comum, sem estado próprio que importe entre requests. Cota e cache vão para o Redis, para todas verem o mesmo saldo e as mesmas respostas. O circuit breaker e a fila ficam por cópia, de propósito. Com a fila por cópia, as vagas somam: 4 cópias com 10 vagas cada mandam até 40 requests ao mesmo tempo para o provedor, então o limite do provedor é dividido pelo número de cópias. Lições <a href="#licao-3">3</a> e <a href="#licao-6">6</a>.</p></details>
     </div>
   </section>
 
@@ -1148,7 +1149,7 @@ if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) 
   <section>
     <h2>Falhas</h2>
     <div class="qa">
-      <details><summary>Quais erros merecem nova tentativa?</summary><p>Os do provedor: falha de conexão, tempo limite, <code>429</code>, <code>529</code> e <code>5xx</code>. Os do request (<code>400</code>, <code>401</code>) não: outro provedor daria a mesma resposta. <a href="#licao-5">Lição 5</a>.</p></details>
+      <details><summary>Quais erros merecem nova tentativa?</summary><p>Os do provedor: falha de conexão, tempo limite, <code>429</code>, <code>529</code> e <code>500</code> a <code>504</code>. Os do request (<code>400</code>, <code>401</code>) não: outro provedor daria a mesma resposta. <a href="#licao-5">Lição 5</a>.</p></details>
       <details><summary>Por que jitter no backoff?</summary><p>Para que os clientes que falharam juntos não tentem de novo todos no mesmo instante e derrubem o servidor que está se recuperando. <a href="#licao-5">Lição 5</a>.</p></details>
       <details><summary>Dá para trocar de provedor no meio de um streaming?</summary><p>Não: o cliente já recebeu parte do texto, e recomeçar em outro provedor duplicaria a resposta. Depois do primeiro byte, uma falha vira um evento de erro no próprio stream. <a href="#licao-5">Lição 5</a>.</p></details>
       <details><summary>Por que least-in-flight piorou com um provedor caído?</summary><p>O provedor caído responde o erro quase na hora, então quase nunca tem request em andamento e sempre parece o mais livre. No experimento, os erros foram de 33,3% (rodízio) para 87,2%. <a href="#licao-4">Lição 4</a>.</p></details>
@@ -1160,7 +1161,7 @@ if (!inProgress.has(flightKey)) inProgress.set(flightKey, new Promise((resolve) 
     <h2>Desempenho</h2>
     <div class="qa">
       <details><summary>O que é backpressure?</summary><p>É quem recebe mais devagar controlar a velocidade de quem manda. No gateway: quando <code>res.write()</code> devolve <code>false</code>, ele para de ler do provedor até o evento <code>drain</code>. <a href="#licao-2">Lição 2</a>.</p></details>
-      <details><summary>Por que olhar o p99, e não a média?</summary><p>A média esconde a cauda. Com um provedor travado, a mediana ficou em 104 ms com e sem circuit breaker; só o p99 (1.270 ms contra 118 ms) mostrou o problema. <a href="#licao-9">Lição 9</a>.</p></details>
+      <details><summary>Por que olhar o p99, e não a média?</summary><p>A média, e até a mediana, escondem a cauda. Com um provedor travado, a mediana ficou em 104 ms com e sem circuit breaker; só o p99 (1.270 ms contra 118 ms) mostrou o problema. <a href="#licao-9">Lição 9</a>.</p></details>
       <details><summary>O que é cache stampede?</summary><p>Muitos requests buscando o mesmo valor ausente ao mesmo tempo. A solução é single-flight: só o primeiro vai ao provedor, os outros esperam a resposta dele. <a href="#licao-8">Lição 8</a>.</p></details>
     </div>
   </section>
