@@ -23,8 +23,8 @@ Cada uma é um `index.html` independente, na própria pasta.
 
 ## Idiomas
 
-Todas as páginas existem em português e em inglês. A versão em inglês fica numa subpasta `en/` ao lado da original
-(`/en/`, `/llm-gateway/en/`, `/volta/en/`, `/volta/en/contato/`), e o seletor PT / EN no menu leva para a mesma página na outra língua.
+A landing page e o guia existem em português e em inglês. A versão em inglês fica numa subpasta `en/` ao lado da original
+(`/en/` e `/llm-gateway/en/`), e o seletor PT / EN no menu leva para o mesmo ponto da página na outra língua. O Volta é só em português.
 
 ## Rodar localmente
 

@@ -94,13 +94,7 @@ input[aria-invalid="true"]{border-color:var(--red)}
 
 
 
-/* seletor de idioma */
-.lang{display:flex;align-items:center;gap:2px;padding:3px;margin-right:2px;border-radius:999px;background:var(--paper)}
-.lang a{display:grid;place-items:center;min-width:34px;height:32px;padding:0 8px;border-radius:999px;font-size:.8rem;font-weight:600;letter-spacing:.02em;color:var(--ink-3);text-decoration:none}
-.lang a[aria-current="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(13,43,42,.18)}
-/* troca de idioma */html.lang-in main{opacity:0}html.lang-in .nav *,html.lang-in .nav *::before,html.lang-in .nav *::after{transition:none!important}html.lang-fade main{transition:opacity .34s ease}html.lang-out main{opacity:0;transition:opacity .22s ease}.lang{position:relative}.lang::before{content:"";position:absolute;left:0;width:var(--lw,0px);transform:translateX(var(--lx,0px));opacity:0;pointer-events:none}.lang.is-ready::before{opacity:1;transition:transform .3s cubic-bezier(.3,.7,.2,1),width .3s cubic-bezier(.3,.7,.2,1)}@media (prefers-reduced-motion:reduce){.lang.is-ready::before{transition:none}}/* fim da troca de idioma */.lang::before{top:3px;bottom:3px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(13,43,42,.18)}.lang a{position:relative;z-index:1;transition:color .3s}.lang.is-ready a[aria-current="true"]{background:none;box-shadow:none}
 </style>
-<script>/* troca de idioma: chegada */try{var s=JSON.parse(sessionStorage.getItem("lang-switch")||"null");if(s&&s.to===location.pathname&&Date.now()-s.t<10000)document.documentElement.classList.add("lang-in")}catch(e){}</script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -114,11 +108,9 @@ input[aria-invalid="true"]{border-color:var(--red)}
 <header class="nav">
   <div class="nav-pill">
     <a class="brand" href="../" aria-label="Volta, voltar para a página inicial"><svg aria-hidden="true"><use href="#mark"/></svg>Volta</a>
-    <nav class="lang" aria-label="Idioma"><a href="./" lang="pt-BR" aria-current="true">PT</a><a href="../en/contato/" lang="en" hreflang="en">EN</a></nav>
     <a class="back" href="../">Voltar para a página</a>
   </div>
 </header>
-<script>/* troca de idioma: menu */try{var s=JSON.parse(sessionStorage.getItem("lang-switch")||"null"),n=document.currentScript.previousElementSibling;if(s&&s.nav&&n&&document.documentElement.classList.contains("lang-in"))n.className=s.nav}catch(e){}</script>
 
 <main>
   <div class="wrap grid">
@@ -250,6 +242,5 @@ input[aria-invalid="true"]{border-color:var(--red)}
   });
 })();
 </script>
-<script>/* troca de idioma */(function(){var KEY="lang-switch",root=document.documentElement,nav=document.querySelector(".lang");if(!nav)return;var MODE="box",KEEP_HASH=false;var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches,home=nav.querySelector("a[aria-current]");function place(a){if(!MODE||!a)return;var n=nav.getBoundingClientRect(),r;if(MODE==="text"){var g=document.createRange();g.selectNodeContents(a);r=g.getBoundingClientRect()}else r=a.getBoundingClientRect();nav.style.setProperty("--lx",(r.left-n.left)+"px");nav.style.setProperty("--lw",r.width+"px")}function mark(a){var c=nav.querySelector("a[aria-current]");if(c)c.removeAttribute("aria-current");a.setAttribute("aria-current","true");place(a)}if(MODE){place(home);requestAnimationFrame(function(){nav.classList.add("is-ready")});if(document.fonts)document.fonts.ready.then(function(){place(nav.querySelector("a[aria-current]"))});addEventListener("resize",function(){place(nav.querySelector("a[aria-current]"))})}function blockOf(el){for(;el&&el!==document.body&&el!==root;el=el.parentElement){var d=getComputedStyle(el).display;if(d!=="inline"&&d!=="contents")return el}return null}function inFlow(el){for(var e=el;e&&e!==document.body;e=e.parentElement){var p=getComputedStyle(e).position;if(p==="fixed"||p==="sticky")return false}return true}function pathOf(el){var p=[];for(;el&&el!==document.body;el=el.parentElement){var i=0,s=el;while(s=s.previousElementSibling)i++;p.unshift(i)}return p}function topOf(el){if(el.offsetParent===undefined)return el.getBoundingClientRect().top+scrollY;for(var y=0,e=el;e;e=e.offsetParent)y+=e.offsetTop;return y}function hOf(el){return el.offsetHeight===undefined?el.getBoundingClientRect().height:el.offsetHeight}function byPath(p){var el=document.body;for(var k=0;k<p.length;k++){el=el.children[p[k]];if(!el)return null}return el}function anchor(line){var xs=[.5,.3,.7];for(var j=0;j<3;j++){var st=document.elementsFromPoint(innerWidth*xs[j],line);for(var k=0;k<st.length;k++){var el=blockOf(st[k]);if(!el||!inFlow(el))continue;var h=hOf(el);if(h<1)continue;return{path:pathOf(el),f:(scrollY+line-topOf(el))/h}}}return null}nav.addEventListener("click",function(e){var a=e.target.closest("a");if(!a||a.hasAttribute("aria-current")||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button)return;e.preventDefault();var url=new URL(a.getAttribute("href"),location.href);if(KEEP_HASH)url.hash=location.hash;var line=Math.round(innerHeight*.3);try{sessionStorage.setItem(KEY,JSON.stringify({to:url.pathname,t:Date.now(),y:scrollY,max:root.scrollHeight-innerHeight,line:line,a:scrollY>0?anchor(line):null,nav:(document.querySelector("header.nav")||{}).className}))}catch(err){}mark(a);if(!reduce)root.classList.add("lang-out");setTimeout(function(){location.href=url.href},reduce?0:300)});addEventListener("pageshow",function(e){if(e.persisted){root.classList.remove("lang-out");if(home)mark(home)}});if(!root.classList.contains("lang-in"))return;var s=null;try{s=JSON.parse(sessionStorage.getItem(KEY)||"null");sessionStorage.removeItem(KEY)}catch(err){}var shown=false;function show(){if(shown)return;shown=true;root.style.scrollBehavior="";if(!reduce)root.classList.add("lang-fade");root.classList.remove("lang-in");setTimeout(function(){root.classList.remove("lang-fade")},450)}function go(){if(!s)return;var y=s.y;if(y>0){var el=s.a&&byPath(s.a.path);if(el&&inFlow(el))y=topOf(el)+s.a.f*hOf(el)-s.line;else if(s.a&&s.max>0)y=s.y/s.max*(root.scrollHeight-innerHeight)}root.style.scrollBehavior="auto";scrollTo(0,Math.max(0,Math.round(y)))}function settle(){go();(document.fonts?document.fonts.ready:Promise.resolve()).then(function(){go();requestAnimationFrame(function(){requestAnimationFrame(function(){go();requestAnimationFrame(show)})})})}if(document.readyState==="loading")addEventListener("DOMContentLoaded",settle);else settle();setTimeout(show,2500)})()</script>
 </body>
 </html>

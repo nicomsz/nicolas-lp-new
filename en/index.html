@@ -426,7 +426,7 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
 }
-/* seletor de idioma */.lang{display:flex;align-items:center;margin:0 4px 0 2px;font-size:.8125rem;font-weight:650;letter-spacing:.03em}.lang a{justify-content:center;min-width:30px;padding:0 3px;opacity:.48;transition:opacity .2s}.lang a[aria-current]{opacity:1;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px}@media (hover:hover){.lang a:not([aria-current]):hover{opacity:.8}}.lang i{width:1px;height:12px;background:currentColor;opacity:.3}@media (min-width:720px){.lang{margin:0 6px 0 8px}}/* troca de idioma */html.lang-in main{opacity:0}html.lang-in .nav *,html.lang-in .nav *::before,html.lang-in .nav *::after{transition:none!important}html.lang-fade main{transition:opacity .34s ease}html.lang-out main{opacity:0;transition:opacity .22s ease}.lang{position:relative}.lang::before{content:"";position:absolute;left:0;width:var(--lw,0px);transform:translateX(var(--lx,0px));opacity:0;pointer-events:none}.lang.is-ready::before{opacity:1;transition:transform .3s cubic-bezier(.3,.7,.2,1),width .3s cubic-bezier(.3,.7,.2,1)}@media (prefers-reduced-motion:reduce){.lang.is-ready::before{transition:none}}/* fim da troca de idioma */.lang::before{bottom:11px;height:1.5px;border-radius:1px;background:currentColor}.lang.is-ready a[aria-current]{text-decoration:none}/* fim do seletor */</style>
+/* Safari no iOS 26: o que é sticky ou fixed não é desenhado embaixo da barra de baixo, que é transparente, e a faixa fica cortada. No topo da página o celular em 3D e o palco ainda não grudaram, então podem ser elementos comuns e aparecer atrás da barra. */html.pin.at-top .gl:not(.gl--contact){position:relative;top:0}html.pin.at-top .stage{position:relative}/* seletor de idioma */.lang{display:flex;align-items:center;margin:0 4px 0 2px;font-size:.8125rem;font-weight:650;letter-spacing:.03em}.lang a{justify-content:center;min-width:30px;padding:0 3px;opacity:.48;transition:opacity .2s}.lang a[aria-current]{opacity:1;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:5px}@media (hover:hover){.lang a:not([aria-current]):hover{opacity:.8}}.lang i{width:1px;height:12px;background:currentColor;opacity:.3}@media (min-width:720px){.lang{margin:0 6px 0 8px}}/* troca de idioma */html.lang-in main{opacity:0}html.lang-in .nav *,html.lang-in .nav *::before,html.lang-in .nav *::after{transition:none!important}html.lang-fade main{transition:opacity .34s ease}html.lang-out main{opacity:0;transition:opacity .22s ease}.lang{position:relative}.lang::before{content:"";position:absolute;left:0;width:var(--lw,0px);transform:translateX(var(--lx,0px));opacity:0;pointer-events:none}.lang.is-ready::before{opacity:1;transition:transform .3s cubic-bezier(.3,.7,.2,1),width .3s cubic-bezier(.3,.7,.2,1)}@media (prefers-reduced-motion:reduce){.lang.is-ready::before{transition:none}}/* fim da troca de idioma */.lang::before{bottom:11px;height:1.5px;border-radius:1px;background:currentColor}.lang.is-ready a[aria-current]{text-decoration:none}/* fim do seletor */</style>
 </head>
 <body>
 <a class="skip" href="#conteudo">Skip to content</a>
@@ -596,11 +596,11 @@ html:not(.pin) .stage__anchor{order:3;grid-column:auto;grid-row:auto;height:auto
             <p class="work__links"><a href="/llm-gateway/en/">Read the 9 lessons <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a><a href="https://github.com/nicomsz/llm-gateway">See the code <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
           </li>
           <li class="work__item">
-            <a class="work__shot" href="/volta/en/" tabindex="-1" aria-hidden="true"><img src="../projetos/volta-en.webp?v=ccd8d4c9" alt="" width="1280" height="800" loading="lazy" decoding="async"></a>
+            <a class="work__shot" href="/volta/" tabindex="-1" aria-hidden="true"><img src="../projetos/volta.webp?v=2753f475" alt="" width="1280" height="800" loading="lazy" decoding="async"></a>
             <span class="label">Product landing page</span>
             <h3 class="work__t">Volta</h3>
             <p class="work__d">Page for a product for vet clinics: pet owners get the vaccine reminder on the clinic's WhatsApp. The conversation builds up as you scroll, and the reminders dashboard has working filters.</p>
-            <p class="work__links"><a href="/volta/en/">See the page <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
+            <p class="work__links"><a href="/volta/">See the page (in Portuguese) <svg class="i" aria-hidden="true"><use href="#i-ne"/></svg></a></p>
           </li>
         </ul>
       </div>
@@ -912,7 +912,12 @@ let last = 0, first = true, onContact = false;
 
 function updateDOM() {
   const stuck = S.y > 24;
-  if (stuck !== ui.stuck) { ui.stuck = stuck; el.nav.classList.toggle("is-stuck", stuck); }
+  if (stuck !== ui.stuck) {
+    ui.stuck = stuck; el.nav.classList.toggle("is-stuck", stuck);
+    // No topo, o canvas e o palco saem do sticky (ver .at-top no CSS). A troca não mexe em nada na tela:
+    // os dois só grudam depois de rolar a altura do herói, então até lá sticky e relative ficam no mesmo lugar.
+    root.classList.toggle("at-top", !stuck);
+  }
   // Cor atrás das barras do navegador no celular. O fundo da raiz acompanha a seção que está na borda de baixo da tela:
   // preto no palco e no contato, claro no resto. O theme-color (barra de cima, em navegadores que o usam) acompanha a de cima.
   const bot = S.y + S.vh, nightB = (bot > M.T + 1 && bot < M.aboutTop + 1) || bot > M.contactTop + 1;
